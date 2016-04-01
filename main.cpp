@@ -1,90 +1,107 @@
 #include <iostream>
 #include <map>
-#include <sys/socket.h>
 
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
-#include<sys/errno.h>
+#include <sys/socket.h>
 
 #include "SDL2/SDL_thread.h"
 
 #include <string.h>
 #include <stdio.h>
-#include <stdlib.h>
 
-#include <netdb.h>
 #include <netinet/in.h>
 #include <unistd.h>
 
+#include "queueManager.h"
+
 using namespace std;
 
-int cant_con;
+using namespace queueManager;
+
+
+int cant_con, input_queue;
 map<int,int> socket_queue;
 
-struct msg_buf {
-  long mtype;
-  char mtext[200];
-};
 
-extern int errno;       // error NO.
+bool writeQueueMessage(int socket, int msgid, char* message, bool socketQueue){
+//When socketQueue = true writes on the socket queue. If its false, writes on the input queue
 
-int writeQueueMessage(int socket, int msgid, char* message){
 	msg_buf msg;
-	int msgqid, rc;
+	int msgqid;
 
 	// message to send
-	msg.mtype = msgid; // set the type of message
-	sprintf (msg.mtext, "%s\n", message); /* setting the right time format by means of ctime() */
+	msg.mtype = msgid;
+	msg.minfo.msocket = socket;
+	sprintf (msg.minfo.mtext, "%s\n", message);
 
-	msgqid = socket_queue[socket];
-	// send the message to queue
-	rc = msgsnd(msgqid, &msg, sizeof(msg.mtext), 0); // the last param can be: 0, IPC_NOWAIT, MSG_NOERROR, or IPC_NOWAIT|MSG_NOERROR.
-	if (rc < 0) {
-		perror( strerror(errno) );
-		printf("msgsnd failed, rc = %d\n", rc);
+	msgqid = (socketQueue) ? socket_queue[socket] : input_queue;
+
+	return sendQueueMessage(msgqid,msg);
+}
+
+static int processMessages (void *data) {
+	msg_buf msg;
+	bool finish = false;
+
+	if (!getQueue(input_queue)) {
+		return 1;
 	}
 
-	return rc;
+	while(!finish){
+		if (!receiveQueueMessage(input_queue, msg)) {
+			return 1;
+		}else{
+			//Validate Message
+			//Process Message
+
+			printf("processMessages | Processing input queue messsage: %s\n", msg.minfo.mtext);
+			//Writes the message in the socket's queue
+			writeQueueMessage(msg.minfo.msocket,msg.mtype, msg.minfo.mtext, true);
+		}
+	}
+
+	return 0;
 
 }
+
 static int doReading (void *sockfd) {
    int n;
    bool finish = false;
    char buffer[256];
 
-
    int sock = *(int*)sockfd;
 
    //Receive a message from client
-     while(!finish)
-     {
-    	 //Read client's message
-    	 	bzero(buffer,256);
-    	 	n = read(sock,buffer,255 );
-    	 	if (n < 0) {
-    	 	  perror("ERROR reading from socket \n");
-    	 	  finish = true;
-    	 	}
+   while(!finish){
+	   //Read client's message
+		bzero(buffer,256);
+		n = recv(sock,buffer,255,0 );
+		if (n < 0) {
+			perror("doReading | ERROR reading from socket \n");
+			finish = true;
+		}
 
-    	 	if (n == 0){
-    	 		//Exit message
-    	 		printf("Exit message received \n");
-				writeQueueMessage(sock,99, "Exit message");
-    	 		finish = true;
-    	 		cant_con--;
-    	 	}else{
-				printf("Here is the message: %s \n",buffer);
+		if (n == 0){
+			//Exit message
+			printf("doReading | Exit message received \n");
+			writeQueueMessage(sock,99, (char*) "Client Connection Closed", true);
+			finish = true;
+			cant_con--;
+		}else{
+			printf("doReading | Client send this message: %s \n",buffer);
 
-				//Respond to the client
-				n = write(sock,"I got your message \n",21);
-				if (n < 0) {
-				  perror("ERROR writing to socket \n");
-				  finish = true;
-				 }
+			//Respond OK to the client
+			n = send(sock,"I got your message \n",21,0);
+			if (n < 0) {
+				perror("doReading | ERROR writing to socket \n");
+				finish = true;
+			}
 
-				writeQueueMessage(sock,1, buffer);
-    	 	}
+			if (!finish){
+				//Puts the message in the input queue
+				printf("doReading | Inserting message '%s' into clients queue \n",buffer);
+				finish = !writeQueueMessage(sock,1, buffer,false);
+			}
+		}
      }
 
 	free(sockfd);
@@ -93,39 +110,36 @@ static int doReading (void *sockfd) {
 }
 
 static int doWriting (void *sockfd) {
-   int n, rc;
+   int msgqid, n;
    bool finish = false;
    msg_buf msg;
 
    int sock = *(int*)sockfd;
 
-   int msgqid;
-
    //Receive a message from client
      while(!finish)
      {
 		msgqid = socket_queue[sock];
-		rc = msgrcv(msgqid, &msg, sizeof(msg.mtext), 0, 0);
-		if (rc < 0) {
-			perror( strerror(errno) );
-			printf("msgrcv failed, rc=%d\n", rc);
+		if (!receiveQueueMessage(msgqid, msg)) {
 			return 1;
 		}
 
 		if (msg.mtype == 99){
 			//Exit message received
-			printf("Exit message received: %s\n", msg.mtext);
+			printf("doWriting | Exit message received: %s\n", msg.minfo.mtext);
+			socket_queue.erase(sock);
 			finish = true;
 		}else{
-			printf("received msg: %s\n", msg.mtext);
+			printf("doWriting | Received queue message: %s\n", msg.minfo.mtext);
 			//Respond to the client
-			n = write(sock,"I got your queue message \n",26);
+			n = send(sock,"I processed your message \n",26,0);
 			if (n < 0) {
-			  perror("ERROR writing to socket \n");
+			  perror("doWriting | ERROR writing to socket \n");
 			  finish = true;
 			}
 		}
 	}
+
 	return 0;
 }
 
@@ -139,25 +153,22 @@ void createAndDetachThread(SDL_ThreadFunction fn, const char *name, void *data){
 	SDL_DetachThread(thread);
 
 }
-int manageNewConnection(int newsockfd){
+
+void manageNewConnection(int newsockfd){
 
 	int *newsock_dir;
 	int msgqid;
 
 	//Create the output messages queue for the socket
-	msgqid = msgget(IPC_PRIVATE, 0666|IPC_CREAT|IPC_EXCL);
-   if (msgqid < 0) {
-	  perror(strerror(errno));
-	  printf("failed to create message queue with msgqid = %d\n", msgqid);
-	  return 1;
+	if (getQueue(msgqid)) {
+		socket_queue[newsockfd] = msgqid;
+
+		newsock_dir = (int *)malloc(sizeof(int));
+		*newsock_dir = newsockfd;
+
+		createAndDetachThread(doReading,"doReading", newsock_dir);
+		createAndDetachThread(doWriting,"doWriting", newsock_dir);
 	}
-	socket_queue[newsockfd] = msgqid;
-
-	newsock_dir = (int *)malloc(sizeof(int));
-	*newsock_dir = newsockfd;
-
-	createAndDetachThread(doReading,"doReading", newsock_dir);
-	createAndDetachThread(doWriting,"doWriting", newsock_dir);
 }
 
 int openAndBindSocket(int port_number){
@@ -167,7 +178,7 @@ int openAndBindSocket(int port_number){
 	// Opening the Socket
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0) {
-	 perror("ERROR opening socket");
+	 perror("openAndBindSocket | ERROR opening socket");
 	 exit(1);
 	}
 
@@ -179,7 +190,7 @@ int openAndBindSocket(int port_number){
 
 	// Binding server address with socket
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-	  perror("ERROR on binding");
+	  perror("openAndBindSocket | ERROR on binding");
 	  exit(1);
 	}
 
@@ -191,11 +202,9 @@ int openAndBindSocket(int port_number){
 
 int main()
 {
-    cout << "Starting...\n";
-
 	int sockfd, newsockfd, port_number, max_con;
 	socklen_t cli_len;
-	struct sockaddr_in serv_addr, cli_addr;
+	struct sockaddr_in cli_addr;
 
 	cant_con = 0;
 
@@ -203,12 +212,18 @@ int main()
 	port_number = 5001;
 	max_con = 2;
 
+
+	printf("Starting... \n");
+
 	sockfd = openAndBindSocket(port_number);
+
+	createAndDetachThread(processMessages,"processMessages", NULL);
 
 	cli_len = sizeof(cli_addr);
 
 	 while (1) {
-		 cout << "CantCon: " << cant_con << " \n";
+
+		printf("Current connections: %i \n", cant_con);
 
 		 //Accept connection from client
 		 newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &cli_len);
@@ -217,8 +232,7 @@ int main()
 		 }else{
 
 			if (cant_con == max_con){
-				char* message = "ERROR: The Server has exceeded max number of connections. \n";
-				write(newsockfd,message,strlen(message));
+				send(newsockfd,"ERROR: The Server has exceeded max number of connections. \n",60,0);
 				close(newsockfd);
 			}else{
 				cant_con++;
