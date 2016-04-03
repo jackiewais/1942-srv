@@ -16,7 +16,7 @@
 using namespace std;
 
 using namespace queueManager;
-
+SDL_mutex *mutexQueue;
 
 int cant_con, input_queue;
 map<int,int> socket_queue;
@@ -67,7 +67,7 @@ static int doReading (void *sockfd) {
    int n;
    bool finish = false;
    char buffer[256];
-
+   mutexQueue = SDL_CreateMutex();
    int sock = *(int*)sockfd;
 
    //Receive a message from client
@@ -97,8 +97,15 @@ static int doReading (void *sockfd) {
 
 			if (!finish){
 				//Puts the message in the input queue
-				printf("doReading | Inserting message '%s' into clients queue \n",buffer);
-				finish = !writeQueueMessage(sock,1, buffer,false);
+				//mutex lock.
+				if (SDL_LockMutex(mutexQueue) == 0) {
+					printf("doReading | Inserting message '%s' into clients queue \n",buffer);
+					finish = !writeQueueMessage(sock,1, buffer,false);
+				//mutex unlock
+				    SDL_UnlockMutex(mutexQueue);
+				}
+				    SDL_DestroyMutex(mutexQueue);
+
 			}
 		}
      }
