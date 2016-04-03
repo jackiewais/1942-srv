@@ -85,7 +85,6 @@ static int doReading (void *sockfd) {
 			printf("doReading | Exit message received \n");
 			writeQueueMessage(sock,99, (char*) "Client Connection Closed", true);
 			finish = true;
-			cant_con--;
 		}else{
 			printf("doReading | Client send this message: %s \n",buffer);
 
@@ -104,6 +103,7 @@ static int doReading (void *sockfd) {
 		}
      }
 
+   	cant_con--;
 	free(sockfd);
 	close(sock);
 	return 0;
@@ -140,6 +140,7 @@ static int doWriting (void *sockfd) {
 		}
 	}
 
+ 	free(sockfd);
 	return 0;
 }
 
@@ -200,7 +201,36 @@ int openAndBindSocket(int port_number){
 	return sockfd;
 }
 
-int main()
+
+static int exitManager (void *data) {
+	  string input;
+	  bool quit = false;
+	  int n;
+
+	  cout << "Type 'quit' any time to exit \n";
+	  while (!quit){
+		  getline (cin, input);
+		  quit = (input == "quit");
+	  }
+
+	  printf("Exit signal received. Closing application... \n");
+
+	  for(auto const &it : socket_queue) {
+		  n = send(it.first,"Server is closed \n",21,0);
+		  if (n < 0) {
+			  perror("exitManager | ERROR writing to socket \n");
+		  }
+		  close(it.first);
+		  cant_con --;
+	  }
+
+	  printf("Application closed. \n");
+
+	  exit(1);
+	  return 1;
+}
+
+int main(int argc, char **argv)
 {
 	int sockfd, newsockfd, port_number, max_con;
 	socklen_t cli_len;
@@ -214,6 +244,7 @@ int main()
 
 
 	printf("Starting... \n");
+	createAndDetachThread(exitManager,"exitManager", NULL);
 
 	sockfd = openAndBindSocket(port_number);
 
