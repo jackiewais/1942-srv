@@ -68,7 +68,7 @@ static int doReading (void *sockfd) {
    int n;
    bool finish = false;
    char buffer[256];
-
+   mutexQueue = SDL_CreateMutex();
    int sock = *(int*)sockfd;
 
    //Receive a message from client
@@ -102,7 +102,7 @@ static int doReading (void *sockfd) {
 				//mutex unlock
 				    SDL_UnlockMutex(mutexQueue);
 				}
-				   
+				    SDL_DestroyMutex(mutexQueue);
 			}
 		}
      }
@@ -241,7 +241,7 @@ int main(int argc, char **argv)
 	int sockfd, newsockfd, port_number, max_con;
 	socklen_t cli_len;
 	struct sockaddr_in cli_addr;
-   	mutexQueue = SDL_CreateMutex();
+
 	cant_con = 0;
 
 	//Parameter definition
@@ -279,6 +279,6 @@ int main(int argc, char **argv)
 			}
 		}
 	}
-        SDL_DestroyMutex(mutexQueue);
+
     return 1;
 }
