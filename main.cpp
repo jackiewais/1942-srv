@@ -85,14 +85,20 @@ static int doReading (void *sockfd) {
 			writeQueueMessage(sock,99, (char*) "Client Connection Closed", true);
 			finish = true;
 		}else{
-			slog.writeLine("doReading | Client send this message: " + string(buffer));
-			//Respond OK to the client
-			n = send(sock,"I got your message \n",21,0);
-			if (n < 0) {
-				slog.writeErrorLine("doReading | ERROR writing to socket");
+			if ((n == 4) & (string(buffer) == "quit")){
+				//Exit message
+				slog.writeLine("doReading | Exit message received");
+				writeQueueMessage(sock,99, (char*) "Client Connection Closed", true);
 				finish = true;
+			}else{
+				slog.writeLine("doReading | Client send this message: " + string(buffer));
+				//Respond OK to the client
+				n = send(sock,"I got your message \n",21,0);
+				if (n < 0) {
+					slog.writeErrorLine("doReading | ERROR writing to socket");
+					finish = true;
+				}
 			}
-
 			if (!finish){
 				//Puts the message in the input queue
 				//mutex lock.
