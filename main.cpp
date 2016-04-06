@@ -93,11 +93,11 @@ static int doReading (void *sockfd) {
 			}else{
 				slog.writeLine("doReading | Client send this message: " + string(buffer));
 				//Respond OK to the client
-				n = send(sock,"I got your message \n",21,0);
+				/*n = send(sock,"I got your message \n",21,0);
 				if (n < 0) {
 					slog.writeErrorLine("doReading | ERROR writing to socket");
 					finish = true;
-				}
+				}*/
 			}
 			if (!finish){
 				//Puts the message in the input queue
@@ -280,6 +280,7 @@ int main(int argc, char **argv)
 				send(newsockfd,"ERROR: The Server has exceeded max number of connections. \n",60,0);
 				close(newsockfd);
 			}else{
+				send(newsockfd,"Connected \n",60,0);
 				cant_con++;
 				manageNewConnection(newsockfd);
 			}
