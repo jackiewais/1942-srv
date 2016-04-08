@@ -70,7 +70,6 @@ static int doReading (void *sockfd) {
    char buffer[256];
 
    int sock = *(int*)sockfd;
-
    //Receive a message from client
    while(!finish){
 	   //Read client's message
@@ -85,9 +84,9 @@ static int doReading (void *sockfd) {
 			writeQueueMessage(sock,99, (char*) "Client Connection Closed", true);
 			finish = true;
 		}else{
-			if ((n == 4) & (string(buffer) == "quit")){
+			if ((n == 1) & (string(buffer) == "q")){
 				//Exit message
-				slog.writeLine("doReading | Exit message received");
+				slog.writeLine("doReading | Quit message received");
 				writeQueueMessage(sock,99, (char*) "Client Connection Closed", true);
 				finish = true;
 			}else{
@@ -173,13 +172,11 @@ void manageNewConnection(int newsockfd){
 	//Create the output messages queue for the socket
 	if (getQueue(msgqid)) {
 		socket_queue[newsockfd] = msgqid;
-
 		newsock_dir = (int *)malloc(sizeof(int));
 		*newsock_dir = newsockfd;
-
 		createAndDetachThread(doReading,"doReading", newsock_dir);
 		createAndDetachThread(doWriting,"doWriting", newsock_dir);
-	}
+ 	}
 }
 
 int openAndBindSocket(int port_number){
@@ -228,10 +225,10 @@ static int exitManager (void *data) {
 	  slog.writeLine("Exit signal received. Closing application...");
 
 	  for(auto const &it : socket_queue) {
-		  n = send(it.first,"Server is closed \n",21,0);
+		  /*n = send(it.first,"Server is closed \n",21,0);
 		  if (n < 0) {
 			  slog.writeErrorLine("exitManager | ERROR writing to socket");
-		  }
+		  }*/
 		  close(it.first);
 		  cant_con --;
 	  }
@@ -252,7 +249,7 @@ int main(int argc, char **argv)
 
 	//Parameter definition
 	port_number = 5001;
-	max_con = 2;
+	max_con = 5;
 
 	//Log initialize
 	slog.createFile();
@@ -275,7 +272,6 @@ int main(int argc, char **argv)
 		 if (newsockfd < 0) {
 			slog.writeErrorLine("ERROR on accept");
 		 }else{
-
 			if (cant_con == max_con){
 				send(newsockfd,"ERROR: The Server has exceeded max number of connections. \n",60,0);
 				close(newsockfd);
