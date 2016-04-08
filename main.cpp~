@@ -19,7 +19,7 @@ using namespace std;
 using namespace queueManager;
 SDL_mutex *mutexQueue;
 SDL_mutex *mutexCantClientes;
-SDL_mutex *mutexQueueCliente;
+SDL_mutex *mutexQueueClientes;
 int cant_con, input_queue;
 map<int,int> socket_queue;
 Log slog;
