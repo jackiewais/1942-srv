@@ -71,6 +71,8 @@ static int doReading (void *sockfd) {
    char buffer[256];
 
    int sock = *(int*)sockfd;
+   free(sockfd);
+
    //Receive a message from client
    while(!finish){
 	   //Read client's message
@@ -119,7 +121,6 @@ static int doReading (void *sockfd) {
   		 SDL_UnlockMutex(mutexCantClientes);	
 		}
    	
-	free(sockfd);
 	close(sock);
 	return 0;
 }
@@ -130,6 +131,7 @@ static int doWriting (void *sockfd) {
    msg_buf msg;
 
    int sock = *(int*)sockfd;
+   free(sockfd);
 
    //Receive a message from client
      while(!finish)
@@ -155,14 +157,17 @@ static int doWriting (void *sockfd) {
 		}
 	}
 
- 	free(sockfd);
 	return 0;
 }
 
-void createAndDetachThread(SDL_ThreadFunction fn, const char *name, void *data){
+void createAndDetachThread(SDL_ThreadFunction fn, const char *name, int data){
 	SDL_Thread *thread;
+	int *data_dir;
 
-	thread = SDL_CreateThread(fn,name, data);
+	data_dir = (int *)malloc(sizeof(int));
+	*data_dir = data;
+
+	thread = SDL_CreateThread(fn,name, data_dir);
 	if (NULL == thread) {
 		slog.writeLine("SDL_CreateThread failed: " +  string(SDL_GetError()) + "");
 	}
@@ -172,16 +177,13 @@ void createAndDetachThread(SDL_ThreadFunction fn, const char *name, void *data){
 
 void manageNewConnection(int newsockfd){
 
-	int *newsock_dir;
 	int msgqid;
 
 	//Create the output messages queue for the socket
 	if (getQueue(msgqid)) {
 		socket_queue[newsockfd] = msgqid;
-		newsock_dir = (int *)malloc(sizeof(int));
-		*newsock_dir = newsockfd;
-		createAndDetachThread(doReading,"doReading", newsock_dir);
-		createAndDetachThread(doWriting,"doWriting", newsock_dir);
+		createAndDetachThread(doReading,"doReading", newsockfd);
+		createAndDetachThread(doWriting,"doWriting", newsockfd);
  	}
 }
 
@@ -196,6 +198,11 @@ int openAndBindSocket(int port_number){
 		slog.writeLine("Application closed.");
 		exit(1);
 	}
+
+	int enable = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+		slog.writeErrorLine("openAndBindSocket | ERROR configuring socket as reusable");
+
 
 	bzero((char *) &serv_addr, sizeof(serv_addr));
 
@@ -220,7 +227,6 @@ int openAndBindSocket(int port_number){
 static int exitManager (void *data) {
 	  string input;
 	  bool quit = false;
-	  int n;
 
 	  cout << "Type 'quit' any time to exit \n";
 	  while (!quit){
@@ -231,10 +237,6 @@ static int exitManager (void *data) {
 	  slog.writeLine("Exit signal received. Closing application...");
 
 	  for(auto const &it : socket_queue) {
-		  /*n = send(it.first,"Server is closed \n",21,0);
-		  if (n < 0) {
-			  slog.writeErrorLine("exitManager | ERROR writing to socket");
-		  }*/
 		  close(it.first);
 		  cant_con --;
 	  }
@@ -263,11 +265,11 @@ int main(int argc, char **argv)
 	slog.createFile();
 
 	slog.writeLine("Starting...");
-	createAndDetachThread(exitManager,"exitManager", NULL);
+	createAndDetachThread(exitManager,"exitManager", 0);
 
 	sockfd = openAndBindSocket(port_number);
 
-	createAndDetachThread(processMessages,"processMessages", NULL);
+	createAndDetachThread(processMessages,"processMessages", 0);
 
 	cli_len = sizeof(cli_addr);
 
@@ -284,7 +286,7 @@ int main(int argc, char **argv)
 				send(newsockfd,"ERROR: The Server has exceeded max number of connections. \n",60,0);
 				close(newsockfd);
 			}else{
-				send(newsockfd,"Connected \n",60,0);
+				send(newsockfd,"Connected \n",12,0);
 				cant_con++;
 				manageNewConnection(newsockfd);
 			}
