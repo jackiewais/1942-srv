@@ -4,7 +4,9 @@ namespace queueManager{
 		  long mtype;
 		  struct msg_content {
 			  int msocket;
-			  char mtext[255];
+			  char data[256];
+		          char id[10];
+		          char type[1];
 		  } minfo;
 		};
 

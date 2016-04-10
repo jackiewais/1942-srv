@@ -14,6 +14,7 @@
 #include "Logger/Log.h"
 #include "Utils/queueManager.h"
 
+
 using namespace std;
 
 using namespace queueManager;
@@ -24,24 +25,66 @@ int cant_con, input_queue;
 map<int,int> socket_queue;
 Log slog;
 
-bool writeQueueMessage(int socket, int msgid, char* message, bool socketQueue){
-//When socketQueue = true writes on the socket queue. If its false, writes on the input queue
+const int lenghtMessage = 3;
+const int lenghtType = 1;
+const int lenghtId = 10;
+const int lenghtData = 255;
 
+struct bufferMessage{
+	// +1 para guardar el /n de fin de string.
+	char id[lenghtId+1];
+	char type[lenghtType+1];
+	char data[lenghtData+1];
+};
+
+
+//====================================================================================================
+
+struct bufferMessage structMessage(char *buffer){
+
+ 	struct bufferMessage msg;
+
+ 	int OffsetId = lenghtMessage;
+ 	int OffsetType= lenghtMessage + lenghtId ;
+ 	int OffsetData= lenghtMessage + lenghtId + lenghtType;
+
+	 bzero(msg.id,lenghtId+1);
+	 bzero(msg.type,lenghtType+1);
+	 bzero(msg.data,lenghtData+1);
+
+	 strncpy(msg.id,buffer+OffsetId,lenghtId);
+	 strncpy(msg.type,buffer+OffsetType,1);
+	 strncpy(msg.data,buffer+OffsetData,30);
+
+ return msg;
+}
+
+bool writeQueueMessage(int socket, int msgid, bufferMessage message, bool socketQueue){
+//When socketQueue = true writes on the socket queue. If its false, writes on the input queue
+	bool prueba= false;
 	msg_buf msg;
 	int msgqid;
 
 	// message to send
 	msg.mtype = msgid;
 	msg.minfo.msocket = socket;
-	sprintf (msg.minfo.mtext, "%s", message);
-
+	
+	sprintf (msg.minfo.data, "%s", message.data);
+	sprintf (msg.minfo.id, "%s", message.id);
+	sprintf (msg.minfo.type, "%s", message.type);
+	
 	msgqid = (socketQueue) ? socket_queue[socket] : input_queue;
+	
+	prueba =sendQueueMessage(msgqid,msg);
 
-	return sendQueueMessage(msgqid,msg);
+	return prueba;
 }
+
+
 
 static int processMessages (void *data) {
 	msg_buf msg;
+	
 	bool finish = false;
 
 	if (!getQueue(input_queue)) {
@@ -52,12 +95,19 @@ static int processMessages (void *data) {
 		if (!receiveQueueMessage(input_queue, msg)) {
 			return 1;
 		}else{
+		
+			//Load Message 
+			bufferMessage message;
+			sprintf (message.data, "%s",msg.minfo.data );
+			sprintf (message.id, "%s", msg.minfo.id);
+			sprintf (message.type, "%s", msg.minfo.type);
 			//Validate Message
+
 			//Process Message
 
-			slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.mtext));
+			slog.writeLine("processMessages | Processing input queue message: " + string(message.data));
 			//Writes the message in the socket's queue
-			writeQueueMessage(msg.minfo.msocket,msg.mtype, msg.minfo.mtext, true);
+			writeQueueMessage(msg.minfo.msocket,msg.mtype, message, true);
 		}
 	}
 
@@ -69,9 +119,13 @@ static int doReading (void *sockfd) {
    int n;
    bool finish = false;
    char buffer[256];
-
+   bufferMessage msg;
    int sock = *(int*)sockfd;
    free(sockfd);
+   bufferMessage msgExit;
+   sprintf (msgExit.data, "%s", "Client Connection Closed");	
+  
+
 
    //Receive a message from client
    while(!finish){
@@ -81,16 +135,16 @@ static int doReading (void *sockfd) {
 		if (n < 0) {
 			slog.writeErrorLine("doReading | ERROR reading from socket");
 			finish = true;
-		}else if (n == 0){
+	   	}else if (n == 0){
 			//Exit message
 			slog.writeLine("doReading | Exit message received");
-			writeQueueMessage(sock,99, (char*) "Client Connection Closed", true);
+			writeQueueMessage(sock,99, msgExit, true);
 			finish = true;
 		}else{
 			if ((n == 1) & (string(buffer) == "q")){
 				//Exit message
 				slog.writeLine("doReading | Quit message received");
-				writeQueueMessage(sock,99, (char*) "Client Connection Closed", true);
+				writeQueueMessage(sock,99, msgExit, true);
 				finish = true;
 			}else{
 				slog.writeLine("doReading | Client send this message: " + string(buffer));
@@ -100,29 +154,34 @@ static int doReading (void *sockfd) {
 					slog.writeErrorLine("doReading | ERROR writing to socket");
 					finish = true;
 				}*/
-			}
+			     }
 			if (!finish){
 				//Puts the message in the input queue
 				//mutex lock.
 				if (SDL_LockMutex(mutexQueue) == 0) {
 					slog.writeLine("doReading | Inserting message '" + string(buffer) + "' into clients queue");
-					finish = !writeQueueMessage(sock,1, buffer,false);
+					msg = structMessage(buffer);
+					finish = !writeQueueMessage(sock,1, msg,false);
+				if (!finish){
+				cout <<"id : "<<  msg.id << endl;
+				cout <<"type : " << msg.type << endl;
+				cout << "data : " <<msg.data << endl;
+				            }
 				//mutex unlock
-				    SDL_UnlockMutex(mutexQueue);
+				 SDL_UnlockMutex(mutexQueue);
 				}
 				   
-			}
-		}
-     }
+		        }	
+		    }
+            } // END WHILE
 		
 		
-		if (SDL_LockMutex(mutexCantClientes) == 0) {
- 		 cant_con--;
-  		 SDL_UnlockMutex(mutexCantClientes);	
-		}
-   	
-	close(sock);
-	return 0;
+	if (SDL_LockMutex(mutexCantClientes) == 0) {
+		 cant_con--;
+ 		 SDL_UnlockMutex(mutexCantClientes);	
+	}
+close(sock);
+return 0;
 }
 
 static int doWriting (void *sockfd) {
@@ -143,11 +202,11 @@ static int doWriting (void *sockfd) {
 
 		if (msg.mtype == 99){
 			//Exit message received
-			slog.writeLine("doWriting | Exit message received: " + string(msg.minfo.mtext));
+			slog.writeLine("doWriting | Exit message received: " + string(msg.minfo.data));
 			socket_queue.erase(sock);
 			finish = true;
 		}else{
-			slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.mtext));
+			slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.data));
 			//Respond to the client
 			n = send(sock,"I processed your message \n",26,0);
 			if (n < 0) {
