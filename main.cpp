@@ -25,16 +25,16 @@ int cant_con, input_queue;
 map<int,int> socket_queue;
 Log slog;
 
-const int lenghtMessage = 3;
-const int lenghtType = 1;
-const int lenghtId = 10;
-const int lenghtData = 255;
+const int lengthMessage = 3;
+const int lengthType = 1;
+const int lengthId = 10;
+const int lengthData = 255;
 
 struct bufferMessage{
 	// +1 para guardar el /n de fin de string.
-	char id[lenghtId+1];
-	char type[lenghtType+1];
-	char data[lenghtData+1];
+	char id[lengthId+1];
+	char type[lengthType+1];
+	char data[lengthData+1];
 };
 
 
@@ -44,17 +44,17 @@ struct bufferMessage structMessage(char *buffer){
 
  	struct bufferMessage msg;
 
- 	int OffsetId = lenghtMessage;
- 	int OffsetType= lenghtMessage + lenghtId ;
- 	int OffsetData= lenghtMessage + lenghtId + lenghtType;
+ 	int OffsetId = lengthMessage;
+ 	int OffsetType= lengthMessage + lengthId ;
+ 	int OffsetData= lengthMessage + lengthId + lengthType;
 
-	 bzero(msg.id,lenghtId+1);
-	 bzero(msg.type,lenghtType+1);
-	 bzero(msg.data,lenghtData+1);
+	 bzero(msg.id,lengthId+1);
+	 bzero(msg.type,lengthType+1);
+	 bzero(msg.data,lengthData+1);
 
-	 strncpy(msg.id,buffer+OffsetId,lenghtId);
-	 strncpy(msg.type,buffer+OffsetType,1);
-	 strncpy(msg.data,buffer+OffsetData,30);
+	 strncpy(msg.id,buffer+OffsetId,lengthId);
+	 strncpy(msg.type,buffer+OffsetType,lengthType);
+	 strncpy(msg.data,buffer+OffsetData,lengthData);
 
  return msg;
 }
@@ -75,9 +75,9 @@ bool writeQueueMessage(int socket, int msgid, bufferMessage message, bool socket
 	
 	msgqid = (socketQueue) ? socket_queue[socket] : input_queue;
 	
-	prueba =sendQueueMessage(msgqid,msg);
+	
+	return sendQueueMessage(msgqid,msg);
 
-	return prueba;
 }
 
 
@@ -124,7 +124,7 @@ static int doReading (void *sockfd) {
    free(sockfd);
    bufferMessage msgExit;
    sprintf (msgExit.data, "%s", "Client Connection Closed");	
-  
+   
 
 
    //Receive a message from client
@@ -132,6 +132,7 @@ static int doReading (void *sockfd) {
 	   //Read client's message
 		bzero(buffer,256);
 		n = recv(sock,buffer,255,0 );
+		
 		if (n < 0) {
 			slog.writeErrorLine("doReading | ERROR reading from socket");
 			finish = true;
@@ -158,6 +159,15 @@ static int doReading (void *sockfd) {
 			if (!finish){
 				//Puts the message in the input queue
 				//mutex lock.
+
+
+
+
+
+
+
+
+
 				if (SDL_LockMutex(mutexQueue) == 0) {
 					slog.writeLine("doReading | Inserting message '" + string(buffer) + "' into clients queue");
 					msg = structMessage(buffer);
@@ -214,9 +224,9 @@ static int doWriting (void *sockfd) {
 			  finish = true;
 			}
 		}
-	}
+     }
 
-	return 0;
+return 0;
 }
 
 void createAndDetachThread(SDL_ThreadFunction fn, const char *name, int data){
