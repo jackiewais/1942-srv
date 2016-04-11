@@ -101,6 +101,7 @@ static int processMessages (void *data) {
 			sprintf (message.data, "%s",msg.minfo.data );
 			sprintf (message.id, "%s", msg.minfo.id);
 			sprintf (message.type, "%s", msg.minfo.type);
+
 			//Validate Message
 
 			//Process Message
@@ -146,7 +147,21 @@ return finish;
 
 }
 
-
+//put the message into mainqueuemessages ( with lock & unlock mutex)
+bool insertingMessageQueue(int sock, char *buffer){
+bufferMessage msg;
+bool finish=false;
+				//mutex lock.
+				if (SDL_LockMutex(mutexQueue) == 0) {
+					slog.writeLine("doReading | Inserting message '" + string(buffer) + "' into clients queue");
+					msg = structMessage(buffer);
+					finish = !writeQueueMessage(sock,1, msg,false);
+				 //mutex unlock
+				 SDL_UnlockMutex(mutexQueue);
+				}
+				
+return finish;
+}
 
 
 
@@ -154,7 +169,7 @@ static int doReading (void *sockfd) {
    int n;
    bool finish = false;
    char buffer[999];
-   bufferMessage msg;
+   
    int sock = *(int*)sockfd;
    free(sockfd);
    char messageLength[3];
@@ -171,37 +186,35 @@ static int doReading (void *sockfd) {
 		finish=doReadingError(n,sock,buffer);
 		
 			if (!finish){
-				
+				//getting the messageLength
 				strncpy(messageLength,buffer,3);
 				messageSize=stoi (messageLength,nullptr,10);
-			  if (n==messageSize){//full message received.
-				//mutex lock.
-				if (SDL_LockMutex(mutexQueue) == 0) {
-					slog.writeLine("doReading | Inserting message '" + string(buffer) + "' into clients queue");
-					msg = structMessage(buffer);
-					finish = !writeQueueMessage(sock,1, msg,false);
-				 //mutex unlock
-				 SDL_UnlockMutex(mutexQueue);
-				 }
-		           }else{//message incomplete.
-				 int readed=n;
-				 while ( readed !=messageSize){
-					n =recv(sock,buffer+readed,messageSize-readed,0);		
-					readed+=n;
-					}
-				}
-		        
-		   	}
+
+				if (n==messageSize){//full message received.
+					finish=insertingMessageQueue(sock,buffer);
+				}else{//message incomplete.
+					int readed=n;
+					while ( readed !=messageSize){
+						n =recv(sock,buffer+readed,messageSize-readed,0);		
+						readed+=n;
+						}
+				      finish=insertingMessageQueue(sock,buffer);
+				     }
+		        }
+		   	
 
    } // END WHILE
 	if (SDL_LockMutex(mutexCantClientes) == 0) {
-		 cant_con--;
- 		 SDL_UnlockMutex(mutexCantClientes);	
+         cant_con--;
+ 	 SDL_UnlockMutex(mutexCantClientes);	
 	}
 
 close(sock);
 return 0;
 }
+
+
+
 
 				/*if (!finish){
 				cout <<"id : "<<  msg.id << endl;
