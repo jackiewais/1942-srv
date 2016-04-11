@@ -157,33 +157,43 @@ static int doReading (void *sockfd) {
    bufferMessage msg;
    int sock = *(int*)sockfd;
    free(sockfd);
-
+   char messageLength[3];
+   int messageSize;
+   char bufferingMessage[999];
+  
    //Receive a message from client
    while(!finish){
 	   //Read client's message
-  		bzero(buffer,999);
+		bzero(bufferingMessage,999);
+		bzero(buffer,999);
    		n = recv(sock,buffer,998,0);
 		//handle conection Exit client,Error reading
 		finish=doReadingError(n,sock,buffer);
 		
 			if (!finish){
-			        
+				
+				strncpy(messageLength,buffer,3);
+				messageSize=stoi (messageLength,nullptr,10);
+			  if (n==messageSize){//full message received.
 				//mutex lock.
 				if (SDL_LockMutex(mutexQueue) == 0) {
 					slog.writeLine("doReading | Inserting message '" + string(buffer) + "' into clients queue");
 					msg = structMessage(buffer);
 					finish = !writeQueueMessage(sock,1, msg,false);
-					cout << sizeof(msg) << endl;
-					cout << n << endl;
 				 //mutex unlock
 				 SDL_UnlockMutex(mutexQueue);
 				 }
-				   
+		           }else{//message incomplete.
+				 int readed=n;
+				 while ( readed !=messageSize){
+					n =recv(sock,buffer+readed,messageSize-readed,0);		
+					readed+=n;
+					}
+				}
 		        
 		   	}
+
    } // END WHILE
-		
-		
 	if (SDL_LockMutex(mutexCantClientes) == 0) {
 		 cant_con--;
  		 SDL_UnlockMutex(mutexCantClientes);	
