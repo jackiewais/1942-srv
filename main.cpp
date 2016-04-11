@@ -28,7 +28,7 @@ Log slog;
 const int lengthMessage = 3;
 const int lengthType = 1;
 const int lengthId = 10;
-const int lengthData = 255;
+const int lengthData = 985;
 
 struct bufferMessage{
 	// +1 para guardar el /n de fin de string.
@@ -115,24 +115,13 @@ static int processMessages (void *data) {
 
 }
 
-static int doReading (void *sockfd) {
-   int n;
-   bool finish = false;
-   char buffer[256];
-   bufferMessage msg;
-   int sock = *(int*)sockfd;
-   free(sockfd);
+
+bool doReadingError(int n, int sock, char* buffer){
    bufferMessage msgExit;
    sprintf (msgExit.data, "%s", "Client Connection Closed");	
-   
-
-
-   //Receive a message from client
-   while(!finish){
-	   //Read client's message
-		bzero(buffer,256);
-		n = recv(sock,buffer,255,0 );
-		
+   sprintf (msgExit.type, "%s", "N");	
+   sprintf (msgExit.id, "%s", "null");	
+   bool finish=false;
 		if (n < 0) {
 			slog.writeErrorLine("doReading | ERROR reading from socket");
 			finish = true;
@@ -141,59 +130,74 @@ static int doReading (void *sockfd) {
 			slog.writeLine("doReading | Exit message received");
 			writeQueueMessage(sock,99, msgExit, true);
 			finish = true;
-		}else{
-			if ((n == 1) & (string(buffer) == "q")){
+		       }else{
+			     if ((n == 1) & (string(buffer) == "q")){
 				//Exit message
 				slog.writeLine("doReading | Quit message received");
 				writeQueueMessage(sock,99, msgExit, true);
 				finish = true;
-			}else{
+			      }else{
 				slog.writeLine("doReading | Client send this message: " + string(buffer));
-				//Respond OK to the client
-				/*n = send(sock,"I got your message \n",21,0);
-				if (n < 0) {
-					slog.writeErrorLine("doReading | ERROR writing to socket");
-					finish = true;
-				}*/
+				
 			     }
+		}
+
+return finish;
+
+}
+
+
+
+
+
+static int doReading (void *sockfd) {
+   int n;
+   bool finish = false;
+   char buffer[999];
+   bufferMessage msg;
+   int sock = *(int*)sockfd;
+   free(sockfd);
+
+   //Receive a message from client
+   while(!finish){
+	   //Read client's message
+  		bzero(buffer,999);
+   		n = recv(sock,buffer,998,0);
+		//handle conection Exit client,Error reading
+		finish=doReadingError(n,sock,buffer);
+		
 			if (!finish){
-				//Puts the message in the input queue
+			        
 				//mutex lock.
-
-
-
-
-
-
-
-
-
 				if (SDL_LockMutex(mutexQueue) == 0) {
 					slog.writeLine("doReading | Inserting message '" + string(buffer) + "' into clients queue");
 					msg = structMessage(buffer);
 					finish = !writeQueueMessage(sock,1, msg,false);
-				if (!finish){
-				cout <<"id : "<<  msg.id << endl;
-				cout <<"type : " << msg.type << endl;
-				cout << "data : " <<msg.data << endl;
-				            }
-				//mutex unlock
+					cout << sizeof(msg) << endl;
+					cout << n << endl;
+				 //mutex unlock
 				 SDL_UnlockMutex(mutexQueue);
-				}
+				 }
 				   
-		        }	
-		    }
-            } // END WHILE
+		        
+		   	}
+   } // END WHILE
 		
 		
 	if (SDL_LockMutex(mutexCantClientes) == 0) {
 		 cant_con--;
  		 SDL_UnlockMutex(mutexCantClientes);	
 	}
+
 close(sock);
 return 0;
 }
 
+				/*if (!finish){
+				cout <<"id : "<<  msg.id << endl;
+				cout <<"type : " << msg.type << endl;
+				cout << "data : " <<msg.data << endl;
+				            }*/
 static int doWriting (void *sockfd) {
    int msgqid, n;
    bool finish = false;

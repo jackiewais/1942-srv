@@ -14,34 +14,77 @@
 #include "Logger/Log.h"
 #include "Utils/queueManager.h"
 
+
 using namespace std;
 
 using namespace queueManager;
 SDL_mutex *mutexQueue;
 SDL_mutex *mutexCantClientes;
-SDL_mutex *mutexQueueClientes;
+SDL_mutex *mutexQueueCliente;
 int cant_con, input_queue;
 map<int,int> socket_queue;
 Log slog;
 
-bool writeQueueMessage(int socket, int msgid, char* message, bool socketQueue){
-//When socketQueue = true writes on the socket queue. If its false, writes on the input queue
+const int lengthMessage = 3;
+const int lengthType = 1;
+const int lengthId = 10;
+const int lengthData = 985;
 
+struct bufferMessage{
+	// +1 para guardar el /n de fin de string.
+	char id[lengthId+1];
+	char type[lengthType+1];
+	char data[lengthData+1];
+};
+
+
+//====================================================================================================
+
+struct bufferMessage structMessage(char *buffer){
+
+ 	struct bufferMessage msg;
+
+ 	int OffsetId = lengthMessage;
+ 	int OffsetType= lengthMessage + lengthId ;
+ 	int OffsetData= lengthMessage + lengthId + lengthType;
+
+	 bzero(msg.id,lengthId+1);
+	 bzero(msg.type,lengthType+1);
+	 bzero(msg.data,lengthData+1);
+
+	 strncpy(msg.id,buffer+OffsetId,lengthId);
+	 strncpy(msg.type,buffer+OffsetType,lengthType);
+	 strncpy(msg.data,buffer+OffsetData,lengthData);
+
+ return msg;
+}
+
+bool writeQueueMessage(int socket, int msgid, bufferMessage message, bool socketQueue){
+//When socketQueue = true writes on the socket queue. If its false, writes on the input queue
+	bool prueba= false;
 	msg_buf msg;
 	int msgqid;
 
 	// message to send
 	msg.mtype = msgid;
 	msg.minfo.msocket = socket;
-	sprintf (msg.minfo.mtext, "%s", message);
-
+	
+	sprintf (msg.minfo.data, "%s", message.data);
+	sprintf (msg.minfo.id, "%s", message.id);
+	sprintf (msg.minfo.type, "%s", message.type);
+	
 	msgqid = (socketQueue) ? socket_queue[socket] : input_queue;
-
+	
+	
 	return sendQueueMessage(msgqid,msg);
+
 }
+
+
 
 static int processMessages (void *data) {
 	msg_buf msg;
+	
 	bool finish = false;
 
 	if (!getQueue(input_queue)) {
@@ -52,12 +95,19 @@ static int processMessages (void *data) {
 		if (!receiveQueueMessage(input_queue, msg)) {
 			return 1;
 		}else{
+		
+			//Load Message 
+			bufferMessage message;
+			sprintf (message.data, "%s",msg.minfo.data );
+			sprintf (message.id, "%s", msg.minfo.id);
+			sprintf (message.type, "%s", msg.minfo.type);
 			//Validate Message
+
 			//Process Message
 
-			slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.mtext));
+			slog.writeLine("processMessages | Processing input queue message: " + string(message.data));
 			//Writes the message in the socket's queue
-			writeQueueMessage(msg.minfo.msocket,msg.mtype, msg.minfo.mtext, true);
+			writeQueueMessage(msg.minfo.msocket,msg.mtype, message, true);
 		}
 	}
 
@@ -68,27 +118,34 @@ static int processMessages (void *data) {
 static int doReading (void *sockfd) {
    int n;
    bool finish = false;
-   char buffer[256];
-
+   char buffer[999];
+   bufferMessage msg;
    int sock = *(int*)sockfd;
+   free(sockfd);
+   bufferMessage msgExit;
+   sprintf (msgExit.data, "%s", "Client Connection Closed");	
+   
+ 
    //Receive a message from client
    while(!finish){
 	   //Read client's message
-		bzero(buffer,256);
-		n = recv(sock,buffer,255,0 );
+  		bzero(buffer,999);
+   		n = recv(sock,buffer,998,0);
+
+		
 		if (n < 0) {
 			slog.writeErrorLine("doReading | ERROR reading from socket");
 			finish = true;
-		}else if (n == 0){
+	   	}else if (n == 0){
 			//Exit message
 			slog.writeLine("doReading | Exit message received");
-			writeQueueMessage(sock,99, (char*) "Client Connection Closed", true);
+			writeQueueMessage(sock,99, msgExit, true);
 			finish = true;
 		}else{
 			if ((n == 1) & (string(buffer) == "q")){
 				//Exit message
 				slog.writeLine("doReading | Quit message received");
-				writeQueueMessage(sock,99, (char*) "Client Connection Closed", true);
+				writeQueueMessage(sock,99, msgExit, true);
 				finish = true;
 			}else{
 				slog.writeLine("doReading | Client send this message: " + string(buffer));
@@ -98,30 +155,38 @@ static int doReading (void *sockfd) {
 					slog.writeErrorLine("doReading | ERROR writing to socket");
 					finish = true;
 				}*/
-			}
+			     }
 			if (!finish){
 				//Puts the message in the input queue
 				//mutex lock.
+
+			cout << "LONGITUD DE N >>>>>>>>>>>>>>>>>>>>>>>>>>> " << n << endl;
+
+
 				if (SDL_LockMutex(mutexQueue) == 0) {
 					slog.writeLine("doReading | Inserting message '" + string(buffer) + "' into clients queue");
-					finish = !writeQueueMessage(sock,1, buffer,false);
+					msg = structMessage(buffer);
+					finish = !writeQueueMessage(sock,1, msg,false);
+				if (!finish){
+				cout <<"id : "<<  msg.id << endl;
+				cout <<"type : " << msg.type << endl;
+				cout << "data : " <<msg.data << endl;
+				            }
 				//mutex unlock
-				    SDL_UnlockMutex(mutexQueue);
+				 SDL_UnlockMutex(mutexQueue);
 				}
 				   
-			}
-		}
-     }
+		        }	
+		    }
+            } // END WHILE
 		
 		
-		if (SDL_LockMutex(mutexCantClientes) == 0) {
- 		 cant_con--;
-  		 SDL_UnlockMutex(mutexCantClientes);	
-		}
-   	
-	free(sockfd);
-	close(sock);
-	return 0;
+	if (SDL_LockMutex(mutexCantClientes) == 0) {
+		 cant_con--;
+ 		 SDL_UnlockMutex(mutexCantClientes);	
+	}
+close(sock);
+return 0;
 }
 
 static int doWriting (void *sockfd) {
@@ -130,6 +195,7 @@ static int doWriting (void *sockfd) {
    msg_buf msg;
 
    int sock = *(int*)sockfd;
+   free(sockfd);
 
    //Receive a message from client
      while(!finish)
@@ -141,11 +207,11 @@ static int doWriting (void *sockfd) {
 
 		if (msg.mtype == 99){
 			//Exit message received
-			slog.writeLine("doWriting | Exit message received: " + string(msg.minfo.mtext));
+			slog.writeLine("doWriting | Exit message received: " + string(msg.minfo.data));
 			socket_queue.erase(sock);
 			finish = true;
 		}else{
-			slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.mtext));
+			slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.data));
 			//Respond to the client
 			n = send(sock,"I processed your message \n",26,0);
 			if (n < 0) {
@@ -153,16 +219,19 @@ static int doWriting (void *sockfd) {
 			  finish = true;
 			}
 		}
-	}
+     }
 
- 	free(sockfd);
-	return 0;
+return 0;
 }
 
-void createAndDetachThread(SDL_ThreadFunction fn, const char *name, void *data){
+void createAndDetachThread(SDL_ThreadFunction fn, const char *name, int data){
 	SDL_Thread *thread;
+	int *data_dir;
 
-	thread = SDL_CreateThread(fn,name, data);
+	data_dir = (int *)malloc(sizeof(int));
+	*data_dir = data;
+
+	thread = SDL_CreateThread(fn,name, data_dir);
 	if (NULL == thread) {
 		slog.writeLine("SDL_CreateThread failed: " +  string(SDL_GetError()) + "");
 	}
@@ -172,16 +241,13 @@ void createAndDetachThread(SDL_ThreadFunction fn, const char *name, void *data){
 
 void manageNewConnection(int newsockfd){
 
-	int *newsock_dir;
 	int msgqid;
 
 	//Create the output messages queue for the socket
 	if (getQueue(msgqid)) {
 		socket_queue[newsockfd] = msgqid;
-		newsock_dir = (int *)malloc(sizeof(int));
-		*newsock_dir = newsockfd;
-		createAndDetachThread(doReading,"doReading", newsock_dir);
-		createAndDetachThread(doWriting,"doWriting", newsock_dir);
+		createAndDetachThread(doReading,"doReading", newsockfd);
+		createAndDetachThread(doWriting,"doWriting", newsockfd);
  	}
 }
 
@@ -196,6 +262,11 @@ int openAndBindSocket(int port_number){
 		slog.writeLine("Application closed.");
 		exit(1);
 	}
+
+	int enable = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+		slog.writeErrorLine("openAndBindSocket | ERROR configuring socket as reusable");
+
 
 	bzero((char *) &serv_addr, sizeof(serv_addr));
 
@@ -220,7 +291,6 @@ int openAndBindSocket(int port_number){
 static int exitManager (void *data) {
 	  string input;
 	  bool quit = false;
-	  int n;
 
 	  cout << "Type 'quit' any time to exit \n";
 	  while (!quit){
@@ -231,10 +301,6 @@ static int exitManager (void *data) {
 	  slog.writeLine("Exit signal received. Closing application...");
 
 	  for(auto const &it : socket_queue) {
-		  /*n = send(it.first,"Server is closed \n",21,0);
-		  if (n < 0) {
-			  slog.writeErrorLine("exitManager | ERROR writing to socket");
-		  }*/
 		  close(it.first);
 		  cant_con --;
 	  }
@@ -263,11 +329,11 @@ int main(int argc, char **argv)
 	slog.createFile();
 
 	slog.writeLine("Starting...");
-	createAndDetachThread(exitManager,"exitManager", NULL);
+	createAndDetachThread(exitManager,"exitManager", 0);
 
 	sockfd = openAndBindSocket(port_number);
 
-	createAndDetachThread(processMessages,"processMessages", NULL);
+	createAndDetachThread(processMessages,"processMessages", 0);
 
 	cli_len = sizeof(cli_addr);
 
@@ -284,7 +350,7 @@ int main(int argc, char **argv)
 				send(newsockfd,"ERROR: The Server has exceeded max number of connections. \n",60,0);
 				close(newsockfd);
 			}else{
-				send(newsockfd,"Connected \n",60,0);
+				send(newsockfd,"Connected \n",12,0);
 				cant_con++;
 				manageNewConnection(newsockfd);
 			}
