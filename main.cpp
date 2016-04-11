@@ -7,17 +7,19 @@
 
 #include <string.h>
 #include <stdio.h>
-
+#include <limits>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <ctype.h>
 #include "Logger/Log.h"
 #include "Utils/queueManager.h"
+#include "Parser/Parser.h"
 
 
 using namespace std;
-
+using namespace Parser;
 using namespace queueManager;
+
 SDL_mutex *mutexQueue;
 SDL_mutex *mutexCantClientes;
 SDL_mutex *mutexQueueCliente;
@@ -348,6 +350,30 @@ static int exitManager (void *data) {
 	  return 0;
 }
 
+void leerXML(int &cantMaxClientes, int &puerto){
+
+	type_datosServer xml;
+	string path;
+
+	cout << "Please enter the XML config path, or 'default' to use default file.:" << endl;
+	cin >> path;
+	if (path == "default")
+		path = getDefaultNameServer();
+
+	while (!fileExists(path.c_str())){
+		cout << "Invalid path. Pease enter the XML config path, or 'default' to use default file." << endl;
+		cin >> path;
+		if (path == "default")
+			path = getDefaultNameServer();
+
+	}
+
+	xml = parseXMLServer(path.c_str());
+
+	cantMaxClientes = xml.cantMaxClientes;
+	puerto = xml.puerto;
+}
+
 int main(int argc, char **argv)
 {
 	int sockfd, newsockfd, port_number, max_con;
@@ -358,16 +384,14 @@ int main(int argc, char **argv)
 	mutexQueueCliente = SDL_CreateMutex();
 	cant_con = 0;
 
-	//Parameter definition
-	port_number = 5001;
-	max_con = 5;
-
 	//Log initialize
 	slog.createFile();
 
 	slog.writeLine("Starting...");
-	createAndDetachThread(exitManager,"exitManager", 0);
 
+	leerXML(max_con,port_number);
+
+	createAndDetachThread(exitManager,"exitManager", 0);
 	sockfd = openAndBindSocket(port_number);
 
 	createAndDetachThread(processMessages,"processMessages", 0);
