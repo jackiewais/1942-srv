@@ -10,7 +10,7 @@
 
 #include <netinet/in.h>
 #include <unistd.h>
-
+#include <ctype.h>
 #include "Logger/Log.h"
 #include "Utils/queueManager.h"
 
@@ -25,28 +25,17 @@ int cant_con, input_queue;
 map<int,int> socket_queue;
 Log slog;
 
-const int lengthMessage = 3;
-const int lengthType = 1;
-const int lengthId = 10;
-const int lengthData = 985;
-
-struct bufferMessage{
-	// +1 para guardar el /n de fin de string.
-	char id[lengthId+1];
-	char type[lengthType+1];
-	char data[lengthData+1];
-};
 
 
 //====================================================================================================
 
 struct bufferMessage structMessage(char *buffer){
 
- 	struct bufferMessage msg;
+ 	 bufferMessage msg;
 
- 	int OffsetId = lengthMessage;
- 	int OffsetType= lengthMessage + lengthId ;
- 	int OffsetData= lengthMessage + lengthId + lengthType;
+ 	 int OffsetId = lengthMessage;
+ 	 int OffsetType= lengthMessage + lengthId ;
+ 	 int OffsetData= lengthMessage + lengthId + lengthType;
 
 	 bzero(msg.id,lengthId+1);
 	 bzero(msg.type,lengthType+1);
@@ -67,7 +56,7 @@ bool writeQueueMessage(int socket, int msgid, bufferMessage message, bool socket
 
 	// message to send
 	msg.mtype = msgid;
-	msg.minfo.msocket = socket;
+	msg.msocket = socket;
 	
 	sprintf (msg.minfo.data, "%s", message.data);
 	sprintf (msg.minfo.id, "%s", message.id);
@@ -86,7 +75,7 @@ static int processMessages (void *data) {
 	msg_buf msg;
 	
 	bool finish = false;
-
+	
 	if (!getQueue(input_queue)) {
 		return 1;
 	}
@@ -96,19 +85,35 @@ static int processMessages (void *data) {
 			return 1;
 		}else{
 		
-			//Load Message 
-			bufferMessage message;
-			sprintf (message.data, "%s",msg.minfo.data );
-			sprintf (message.id, "%s", msg.minfo.id);
-			sprintf (message.type, "%s", msg.minfo.type);
+			cout << "ESTOY EN PROCESAR " << endl;
+			cout << "DATA " << msg.minfo.data << endl ;
+			cout << "ID "<< msg.minfo.id << endl;
+			cout << "TIPO " <<msg.minfo.type << endl;
 
 			//Validate Message
+			
+		
+			
+			switch(msg.minfo.type[1]){
 
+			case 'i': 
+			cout << "esto es un INT" << endl;
+			break;
+			case 'd': 	
+			cout << "esto es un DOUBLE" << endl;
+			break;
+			case 'c': 
+			cout<< "esto es un CHAR" << endl;
+			break;
+			case 's': 
+			cout<<"esto es un STRING" << endl;
+			break;
+			}	
 			//Process Message
 
-			slog.writeLine("processMessages | Processing input queue message: " + string(message.data));
+			slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
 			//Writes the message in the socket's queue
-			writeQueueMessage(msg.minfo.msocket,msg.mtype, message, true);
+			writeQueueMessage(msg.msocket,msg.mtype, msg.minfo, true);
 		}
 	}
 
