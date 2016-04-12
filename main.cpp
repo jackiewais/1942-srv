@@ -52,7 +52,6 @@ struct bufferMessage structMessage(char *buffer){
 
 bool writeQueueMessage(int socket, int msgid, bufferMessage message, bool socketQueue){
 //When socketQueue = true writes on the socket queue. If its false, writes on the input queue
-	bool prueba= false;
 	msg_buf msg;
 	int msgqid;
 
@@ -66,16 +65,56 @@ bool writeQueueMessage(int socket, int msgid, bufferMessage message, bool socket
 	
 	msgqid = (socketQueue) ? socket_queue[socket] : input_queue;
 	
-	
 	return sendQueueMessage(msgqid,msg);
 
 }
 
 
+bool check_integer(const char* value) {
+  for(unsigned int i = 0; i < strlen(value); ++i) {
+    if(!isdigit(value[i]))
+      return false;
+  }
+  return true;
+}
+
+bool check_double(const char* value) {
+	char *p;
+	strtod(value, & p );
+	return (* p == 0 );
+}
+
+bool check_char(const char* value) {
+	return strlen(value) == 1;
+}
+
+bool validate_message(bufferMessage message ){
+
+	switch(message.type[0]){
+		case 'i':
+			slog.writeLine("validate_message | Validating Integer");
+			return check_integer(message.data);
+			break;
+		case 'd':
+			slog.writeLine("validate_message | Validating Double");
+			return check_double(message.data);
+			break;
+		case 'c':
+			slog.writeLine("validate_message | Validating Char");
+			return check_char(message.data);
+			break;
+		case 's':
+			slog.writeLine("validate_message | Validating String");
+			return true;
+			break;
+		default:
+			return false;
+		}
+}
 
 static int processMessages (void *data) {
 	msg_buf msg;
-	
+
 	bool finish = false;
 	
 	if (!getQueue(input_queue)) {
@@ -86,36 +125,13 @@ static int processMessages (void *data) {
 		if (!receiveQueueMessage(input_queue, msg)) {
 			return 1;
 		}else{
-		
-			cout << "ESTOY EN PROCESAR " << endl;
-			cout << "DATA " << msg.minfo.data << endl ;
-			cout << "ID "<< msg.minfo.id << endl;
-			cout << "TIPO " <<msg.minfo.type << endl;
+			slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
 
 			//Validate Message
-			
-		
-			
-			switch(msg.minfo.type[1]){
+			long response = (validate_message(msg.minfo))? 1 : 2;
 
-			case 'i': 
-			cout << "esto es un INT" << endl;
-			break;
-			case 'd': 	
-			cout << "esto es un DOUBLE" << endl;
-			break;
-			case 'c': 
-			cout<< "esto es un CHAR" << endl;
-			break;
-			case 's': 
-			cout<<"esto es un STRING" << endl;
-			break;
-			}	
-			//Process Message
-
-			slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
 			//Writes the message in the socket's queue
-			writeQueueMessage(msg.msocket,msg.mtype, msg.minfo, true);
+			writeQueueMessage(msg.msocket,response, msg.minfo, true);
 		}
 	}
 
@@ -243,8 +259,10 @@ static int doWriting (void *sockfd) {
 			finish = true;
 		}else{
 			slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.data));
-			//Respond to the client
-			n = send(sock,"I processed your message \n",26,0);
+
+			const char* message = (msg.mtype == 1)?"Message is correct. I processed your message \n":"ERROR: Message is not correct. I can't process your message \n";
+
+			n = send(sock,message,strlen(message),0);
 			if (n < 0) {
 			  slog.writeErrorLine("doWriting | ERROR writing to socket");
 			  finish = true;
@@ -252,7 +270,7 @@ static int doWriting (void *sockfd) {
 		}
      }
 
-return 0;
+     return 0;
 }
 
 void createAndDetachThread(SDL_ThreadFunction fn, const char *name, int data){
@@ -395,12 +413,15 @@ int main(int argc, char **argv)
 
 		 //Accept connection from client
 		 newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &cli_len);
-		 struct timeval timeout;
-		    timeout.tv_sec = 20;
-		    timeout.tv_usec = 0;
 
+		 struct timeval timeout;
+		 timeout.tv_sec = 20;
+		 timeout.tv_usec = 0;
 		if (setsockopt (newsockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0)
-			slog.writeErrorLine("setsockopt failed\n");
+			slog.writeErrorLine("ERROR setting socket rcv timeout");
+
+		if (setsockopt (sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+			slog.writeErrorLine("ERROR setting socket snd timeout");
 
 		 if (newsockfd < 0) {
 			slog.writeErrorLine("ERROR on accept");
