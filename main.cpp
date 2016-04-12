@@ -220,14 +220,6 @@ close(sock);
 return 0;
 }
 
-
-
-
-				/*if (!finish){
-				cout <<"id : "<<  msg.id << endl;
-				cout <<"type : " << msg.type << endl;
-				cout << "data : " <<msg.data << endl;
-				            }*/
 static int doWriting (void *sockfd) {
    int msgqid, n;
    bool finish = false;
@@ -305,7 +297,6 @@ int openAndBindSocket(int port_number){
 	int enable = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
 		slog.writeErrorLine("openAndBindSocket | ERROR configuring socket as reusable");
-
 
 	bzero((char *) &serv_addr, sizeof(serv_addr));
 
@@ -404,6 +395,13 @@ int main(int argc, char **argv)
 
 		 //Accept connection from client
 		 newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &cli_len);
+		 struct timeval timeout;
+		    timeout.tv_sec = 20;
+		    timeout.tv_usec = 0;
+
+		if (setsockopt (newsockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0)
+			slog.writeErrorLine("setsockopt failed\n");
+
 		 if (newsockfd < 0) {
 			slog.writeErrorLine("ERROR on accept");
 		 }else{
