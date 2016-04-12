@@ -1,0 +1,11 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="servidor">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element type="xs:byte" name="CantidadMaximaClientes"/>
+        <xs:element type="xs:short" name="puerto"/>
+        <xs:element type="xs:byte" name="log"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
