@@ -7,6 +7,7 @@
 
 
 #include <map>
+#include "../Logger/Log.h"
 
 namespace Parser {
 
@@ -36,8 +37,8 @@ namespace Parser {
 	const char* getDefaultNameServer();
 	const char* getDefaultNameClient();
 
-	type_datosServer parseXMLServer(const char * nombreArchivo);
-	type_datosCliente parseXMLCliente(const char * nombreArchivo);
+	type_datosServer parseXMLServer(const char * nombreArchivo, Log * log);
+	type_datosCliente parseXMLCliente(const char * nombreArchivo, Log * log);
 
 };
 

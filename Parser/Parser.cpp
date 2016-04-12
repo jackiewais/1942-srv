@@ -137,19 +137,22 @@ void validarFormato(const char * nombreArchivo, char * schemaPath, bool &XMLVali
 	XMLPlatformUtils::Terminate();
 }
 
-type_datosServer Parser::parseXMLServer(const char * nombreArchivo) {
+type_datosServer Parser::parseXMLServer(const char * nombreArchivo, Log * log) {
 	xml_document<> archivo;
 	xml_node<> * nodo_raiz;
 
 	ifstream elArchivo (nombreArchivo);
 	if (!elArchivo.good()) {
-		return parseXMLServer(getDefaultNameServer());
+		log->writeErrorLine("Archivo inexistente");
+		return parseXMLServer(getDefaultNameServer(), log);
 	}
 
 	bool formatoCorrecto;
 	validarFormato(nombreArchivo, "schemaServer.xsd", formatoCorrecto);
-	if (!formatoCorrecto)
-		return parseXMLServer(getDefaultNameServer());
+	if (!formatoCorrecto){
+		log->writeErrorLine("Archivo con formato invalido");
+		return parseXMLServer(getDefaultNameServer(), log);
+	}
 
 	vector<char> buffer((istreambuf_iterator<char>(elArchivo)), istreambuf_iterator<char>());
 	buffer.push_back('\0');
@@ -170,8 +173,10 @@ type_datosServer Parser::parseXMLServer(const char * nombreArchivo) {
 		unXML.puerto = atoi(puerto);
 		unXML.logLevel = atoi(level);
 		return unXML;
-	} else
-		return parseXMLServer(getDefaultNameServer());
+	} else {
+		log->writeErrorLine("puerto y/o cantidad maxima invalidos");
+		return parseXMLServer(getDefaultNameServer(), log);
+	}
 
 }
 
@@ -179,19 +184,22 @@ const char* Parser::getDefaultNameClient(){
 	return "defaultClienteXML.xml";
 }
 
-type_datosCliente Parser::parseXMLCliente(const char * nombreArchivo) {
+type_datosCliente Parser::parseXMLCliente(const char * nombreArchivo, Log* log) {
 	xml_document<> archivo;
 	xml_node<> * nodo_raiz;
 
 	ifstream elArchivo (nombreArchivo);
 	if (!elArchivo.good()) {
-		return parseXMLCliente(getDefaultNameClient());
+		log->writeErrorLine("Archivo inexistente, se usa el default");
+		return parseXMLCliente(getDefaultNameClient(), log);
 	}
 
 	bool formatoCorrecto;
 	validarFormato(nombreArchivo, "schemaCliente.xsd", formatoCorrecto);
-	if (!formatoCorrecto)
-		return parseXMLCliente(getDefaultNameClient());
+	if (!formatoCorrecto){
+		log->writeErrorLine("Archivo con formato invalido, se usa el default");
+		return parseXMLCliente(getDefaultNameClient(), log);
+	}
 
 	vector<char> buffer((istreambuf_iterator<char>(elArchivo)), istreambuf_iterator<char>());
 	buffer.push_back('\0');
@@ -214,8 +222,10 @@ type_datosCliente Parser::parseXMLCliente(const char * nombreArchivo) {
 		unXML.ip = ip;
 		unXML.puerto = atoi(puerto);
 		unXML.logLevel = atoi(level);
-	} else
-		return parseXMLCliente(getDefaultNameClient());
+	} else {
+		log->writeErrorLine("ip y/o puerto invalidos");
+		return parseXMLCliente(getDefaultNameClient(), log);
+	}
 
 	map<int,type_mensaje>* mensajes = new map<int,type_mensaje>();
 		int i = 0;
@@ -237,11 +247,15 @@ type_datosCliente Parser::parseXMLCliente(const char * nombreArchivo) {
 			unMsj.valor = valor;
 			(*mensajes).insert(std::pair<int,type_mensaje>(i,unMsj));
 			i++;
-		} else
-			return parseXMLCliente(getDefaultNameClient());
+		} else {
+			log->writeErrorLine("mensaje cliente invalido");
+			return parseXMLCliente(getDefaultNameClient(), log);
+		}
 	}
-	if (!validarUnicidadID(mensajes))
-		return parseXMLCliente(getDefaultNameClient());
+	if (!validarUnicidadID(mensajes)) {
+		log->writeErrorLine("ids duplicados");
+		return parseXMLCliente(getDefaultNameClient(), log);
+	}
 	unXML.mensajes = mensajes;
 	return unXML;
 }
