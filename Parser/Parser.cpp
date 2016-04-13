@@ -42,7 +42,7 @@ messageType formatTipoMsj(char * tipo) {
 }
 
 bool sonDigitos(char* str){
-	for (int i = 0; i < strlen (str); i++) {
+	for (unsigned int i = 0; i < strlen (str); i++) {
 		if (! isdigit (str[i])) {
 			return false;
 		}
@@ -110,7 +110,7 @@ bool validarUnicidadID(map<int,type_mensaje> * mensajes) {
 	return true;
 }
 
-void validarFormato(const char * nombreArchivo, char * schemaPath, bool &XMLValido){
+void validarFormato(const char * nombreArchivo,const char * schemaPath, bool &XMLValido){
 	XMLPlatformUtils::Initialize();
 	{
 		XercesDOMParser domParser;

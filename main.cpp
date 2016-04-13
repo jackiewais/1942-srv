@@ -52,7 +52,6 @@ struct bufferMessage structMessage(char *buffer){
 
 bool writeQueueMessage(int socket, int msgid, bufferMessage message, bool socketQueue){
 //When socketQueue = true writes on the socket queue. If its false, writes on the input queue
-	bool prueba= false;
 	msg_buf msg;
 	int msgqid;
 
@@ -71,7 +70,47 @@ bool writeQueueMessage(int socket, int msgid, bufferMessage message, bool socket
 
 }
 
+bool check_integer(const char* value) {
+  for(unsigned int i = 0; i < strlen(value); ++i) {
+    if(!isdigit(value[i]))
+      return false;
+  }
+  return true;
+}
 
+bool check_double(const char* value) {
+	char *p;
+	strtod(value, & p );
+	return (* p == 0 );
+}
+
+bool check_char(const char* value) {
+	return strlen(value) == 1;
+}
+
+bool validate_message(bufferMessage message ){
+
+	switch(message.type[0]){
+		case 'i':
+			slog.writeLine("validate_message | Validating Integer");
+			return check_integer(message.data);
+			break;
+		case 'd':
+			slog.writeLine("validate_message | Validating Double");
+			return check_double(message.data);
+			break;
+		case 'c':
+			slog.writeLine("validate_message | Validating Char");
+			return check_char(message.data);
+			break;
+		case 's':
+			slog.writeLine("validate_message | Validating String");
+			return true;
+			break;
+		default:
+			return false;
+		}
+}
 
 static int processMessages (void *data) {
 	msg_buf msg;
@@ -87,35 +126,13 @@ static int processMessages (void *data) {
 			return 1;
 		}else{
 
-			cout << "ESTOY EN PROCESAR " << endl;
-			cout << "DATA " << msg.minfo.data << endl ;
-			cout << "ID "<< msg.minfo.id << endl;
-			cout << "TIPO " <<msg.minfo.type << endl;
+			slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
 
-			//Validate Message
-
-
-
-			switch(msg.minfo.type[1]){
-
-			case 'i':
-			cout << "esto es un INT" << endl;
-			break;
-			case 'd':
-			cout << "esto es un DOUBLE" << endl;
-			break;
-			case 'c':
-			cout<< "esto es un CHAR" << endl;
-			break;
-			case 's':
-			cout<<"esto es un STRING" << endl;
-			break;
-			}
-			//Process Message
+			long response = (validate_message(msg.minfo))? 1 : 2;
 
 			slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
 			//Writes the message in the socket's queue
-			writeQueueMessage(msg.msocket,msg.mtype, msg.minfo, true);
+			writeQueueMessage(msg.msocket,response, msg.minfo, true);
 		}
 	}
 
@@ -131,21 +148,21 @@ bool doReadingError(int n, int sock, char* buffer){
    sprintf (msgExit.id, "%s", "null");	
    bool finish=false;
 		if (n < 0) {
-			slog.writeErrorLine("doReading | ERROR reading from socket");
+			slog.writeErrorLine("doReadingError | ERROR reading from socket");
 			finish = true;
 	   	}else if (n == 0){
 			//Exit message
-			slog.writeLine("doReading | Exit message received");
+			slog.writeLine("doReadingError | Exit message received");
 			writeQueueMessage(sock,99, msgExit, true);
 			finish = true;
 		       }else{
 			     if ((n == 1) & (string(buffer) == "q")){
 				//Exit message
-				slog.writeLine("doReading | Quit message received");
+				slog.writeLine("doReadingError | Quit message received");
 				writeQueueMessage(sock,99, msgExit, true);
 				finish = true;
 			      }else{
-				slog.writeLine("doReading | Client send this message: " + string(buffer));
+				slog.writeLine("doReadingError | Client send this message: " + string(buffer));
 				
 			     }
 		}
@@ -160,7 +177,7 @@ bufferMessage msg;
 bool finish=false;
 				//mutex lock.
 				if (SDL_LockMutex(mutexQueue) == 0) {
-					slog.writeLine("doReading | Inserting message '" + string(buffer) + "' into clients queue");
+					slog.writeLine("insertingMessageQueue | Inserting message '" + string(buffer) + "' into clients queue");
 					msg = structMessage(buffer);
 					finish = !writeQueueMessage(sock,1, msg,false);
 				 //mutex unlock
@@ -244,7 +261,9 @@ static int doWriting (void *sockfd) {
 		}else{
 			slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.data));
 			//Respond to the client
-			n = send(sock,"I processed your message \n",26,0);
+			const char* message = (msg.mtype == 1)?"Message is correct. I processed your message \n":"ERROR: Message is not correct. I can't process your message \n";
+
+			n = send(sock,message,strlen(message),0);
 			if (n < 0) {
 			  slog.writeErrorLine("doWriting | ERROR writing to socket");
 			  finish = true;
@@ -348,14 +367,18 @@ void leerXML(int &cantMaxClientes, int &puerto){
 
 	cout << "Please enter the XML config path, or 'default' to use default file.:" << endl;
 	cin >> path;
-	if (path == "default")
+	if (path == "default"){
+		slog.writeWarningLine("Se toma el XML de default");
 		path = getDefaultNameServer();
+	}
 
 	while (!fileExists(path.c_str())){
 		cout << "Invalid path. Pease enter the XML config path, or 'default' to use default file." << endl;
 		cin >> path;
-		if (path == "default")
+		if (path == "default"){
+			slog.writeWarningLine("Se toma el XML de default");
 			path = getDefaultNameServer();
+		}
 
 	}
 
@@ -376,7 +399,7 @@ int main(int argc, char **argv)
 	cant_con = 0;
 
 	//Log initialize
-	slog.createFile();
+	slog.createFile(3);
 
 	slog.writeLine("Starting...");
 
@@ -396,11 +419,14 @@ int main(int argc, char **argv)
 		 //Accept connection from client
 		 newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &cli_len);
 		 struct timeval timeout;
-		    timeout.tv_sec = 20;
-		    timeout.tv_usec = 0;
+		 timeout.tv_sec = 60;
+		 timeout.tv_usec = 0;
 
-		if (setsockopt (newsockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0)
-			slog.writeErrorLine("setsockopt failed\n");
+		 if (setsockopt (newsockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0)
+			 slog.writeErrorLine("ERROR setting socket rcv timeout");
+
+		 if (setsockopt (sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+		 	slog.writeErrorLine("ERROR setting socket snd timeout");
 
 		 if (newsockfd < 0) {
 			slog.writeErrorLine("ERROR on accept");
