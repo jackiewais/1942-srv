@@ -155,12 +155,12 @@ bool doReadingError(int n, int sock, char* buffer){
 	   	}else{
 			 if ((n == 1) & (string(buffer) == "q")){
 				//Exit message
-				slog.writeLine("doReadingError | Quit message received");
+				slog.writeLine("doReading | Quit message received");
 				writeQueueMessage(sock,99, msgExit, true);
 				finish = true;
-			 }else{
-				slog.writeLine("doReadingError | Client send this message: " + string(buffer));
-			 }
+			 }else {
+				slog.writeLine("doReading | Client send this message: " + string(buffer));				
+			}
 		}
 
 		return finish;
@@ -171,7 +171,8 @@ bool doReadingError(int n, int sock, char* buffer){
 bool insertingMessageQueue(int sock, char *buffer){
 	bufferMessage msg;
 	bool finish=false;
-
+      
+				
 	//mutex lock.
 	if (SDL_LockMutex(mutexQueue) == 0) {
 		slog.writeLine("insertingMessageQueue | Inserting message '" + string(buffer) + "' into clients queue");
@@ -205,7 +206,7 @@ static int doReading (void *sockfd) {
    		n = recv(sock,buffer,998,0);
 		//handle conection Exit client,Error reading
 		finish=doReadingError(n,sock,buffer);
-		
+	        	
 		if (!finish){
 			//getting the messageLength
 			strncpy(messageLength,buffer,3);

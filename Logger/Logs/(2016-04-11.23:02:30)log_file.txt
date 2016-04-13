@@ -1,0 +1,4 @@
+Archivo de Log inicializado: 2016-04-11.23:02:09
+
+2016-04-11.23:02:09 || Starting...
+2016-04-11.23:02:28 || doReading | Client send this message: ÿôÿý
