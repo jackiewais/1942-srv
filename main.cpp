@@ -26,7 +26,7 @@ SDL_mutex *mutexQueueCliente;
 int cant_con, input_queue;
 map<int,int> socket_queue;
 Log slog;
-
+bool quit=false;
 
 
 //====================================================================================================
@@ -199,7 +199,7 @@ static int doReading (void *sockfd) {
    char bufferingMessage[999];
   
    //Receive a message from client
-   while(!finish){
+   while(!finish && !quit){
 	   //Read client's message
 		bzero(bufferingMessage,999);
 		bzero(buffer,999);
@@ -214,7 +214,7 @@ static int doReading (void *sockfd) {
 
 			if (n==messageSize){//full message received.
 				finish=insertingMessageQueue(sock,buffer);
-			}else{//message incomplete.
+			}/*else{//message incomplete.
 				int readed=n;
 				cout << messageSize << endl;
 				while ( readed !=messageSize){
@@ -223,16 +223,18 @@ static int doReading (void *sockfd) {
 					readed+=n;
 				}
 				finish=insertingMessageQueue(sock,buffer);
-			}
+			 }*/
 		}
 
    	} // END WHILE
+	if (!quit){
 	if (SDL_LockMutex(mutexCantClientes) == 0) {
          cant_con--;
  	 SDL_UnlockMutex(mutexCantClientes);	
 	}
 
 	close(sock);
+}
 	return 0;
 }
 
@@ -245,7 +247,7 @@ static int doWriting (void *sockfd) {
    free(sockfd);
 
    //Receive a message from client
-     while(!finish)
+     while(!finish && !quit)
      {
 		msgqid = socket_queue[sock];
 		if (!receiveQueueMessage(msgqid, msg)) {
@@ -262,10 +264,12 @@ static int doWriting (void *sockfd) {
 			//Respond to the client
 			const char* message = (msg.mtype == 1)?"Message is correct. I processed your message \n":"ERROR: Message is not correct. I can't process your message \n";
 
+			if(!quit){
 			n = send(sock,message,strlen(message),0);
 			if (n < 0) {
 			  slog.writeErrorLine("doWriting | ERROR writing to socket");
 			  finish = true;
+			}
 			}
 		}
      }
@@ -338,7 +342,7 @@ int openAndBindSocket(int port_number){
 
 static int exitManager (void *data) {
 	  string input;
-	  bool quit = false;
+	  //bool quit = false;
 
 	  cout << "Type 'quit' any time to exit \n";
 	  while (!quit){
@@ -347,12 +351,14 @@ static int exitManager (void *data) {
 	  }
 
 	  slog.writeLine("Exit signal received. Closing application...");
-
+	  SDL_LockMutex(mutexCantClientes);
+	  SDL_LockMutex(mutexQueue);
 	  for(auto const &it : socket_queue) {
 		  close(it.first);
 		  cant_con --;
 	  }
-
+	 
+	  
 	  slog.writeLine("Application closed.");
 
 	  exit(0);
@@ -420,7 +426,7 @@ int main(int argc, char **argv)
 		 //Accept connection from client
 		 newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &cli_len);
 		 struct timeval timeout;
-		 timeout.tv_sec = 60;
+		 timeout.tv_sec = 180;
 		 timeout.tv_usec = 0;
 
 		 if (setsockopt (newsockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0)
@@ -443,5 +449,6 @@ int main(int argc, char **argv)
 		}
 	}
         SDL_DestroyMutex(mutexQueue);
+	SDL_DestroyMutex(mutexCantClientes);
     return 1;
 }
