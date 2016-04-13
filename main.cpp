@@ -214,7 +214,7 @@ static int doReading (void *sockfd) {
 
 			if (n==messageSize){//full message received.
 				finish=insertingMessageQueue(sock,buffer);
-			}/*else{//message incomplete.
+			}else{//message incomplete.
 				int readed=n;
 				cout << messageSize << endl;
 				while ( readed !=messageSize){
@@ -223,7 +223,7 @@ static int doReading (void *sockfd) {
 					readed+=n;
 				}
 				finish=insertingMessageQueue(sock,buffer);
-			 }*/
+			 }
 		}
 
    	} // END WHILE
