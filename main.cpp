@@ -216,8 +216,10 @@ static int doReading (void *sockfd) {
 				finish=insertingMessageQueue(sock,buffer);
 			}else{//message incomplete.
 				int readed=n;
+				cout << messageSize << endl;
 				while ( readed !=messageSize){
 					n =recv(sock,buffer+readed,messageSize-readed,0);
+					cout << "loopeando dentro del doreading" << endl;					
 					readed+=n;
 				}
 				finish=insertingMessageQueue(sock,buffer);
