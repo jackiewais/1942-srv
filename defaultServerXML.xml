@@ -1,5 +1,5 @@
 <servidor>
-	<CantidadMaximaClientes>7</CantidadMaximaClientes>
+	<CantidadMaximaClientes>3</CantidadMaximaClientes>
 	<puerto>5001</puerto>
 	<log>1</log>
 </servidor>

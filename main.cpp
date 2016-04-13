@@ -64,7 +64,7 @@ bool writeQueueMessage(int socket, int msgid, bufferMessage message, bool socket
 	sprintf (msg.minfo.type, "%s", message.type);
 	
 	msgqid = (socketQueue) ? socket_queue[socket] : input_queue;
-	
+
 
 	return sendQueueMessage(msgqid,msg);
 
@@ -125,12 +125,8 @@ static int processMessages (void *data) {
 		if (!receiveQueueMessage(input_queue, msg)) {
 			return 1;
 		}else{
-
 			slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
-
 			long response = (validate_message(msg.minfo))? 1 : 2;
-
-			slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
 			//Writes the message in the socket's queue
 			writeQueueMessage(msg.msocket,response, msg.minfo, true);
 		}
@@ -149,42 +145,43 @@ bool doReadingError(int n, int sock, char* buffer){
    bool finish=false;
 		if (n < 0) {
 			slog.writeErrorLine("doReadingError | ERROR reading from socket");
+			writeQueueMessage(sock,99, msgExit, true);
 			finish = true;
 	   	}else if (n == 0){
 			//Exit message
 			slog.writeLine("doReadingError | Exit message received");
 			writeQueueMessage(sock,99, msgExit, true);
 			finish = true;
-		       }else{
-			     if ((n == 1) & (string(buffer) == "q")){
+	   	}else{
+			 if ((n == 1) & (string(buffer) == "q")){
 				//Exit message
 				slog.writeLine("doReadingError | Quit message received");
 				writeQueueMessage(sock,99, msgExit, true);
 				finish = true;
-			      }else{
+			 }else{
 				slog.writeLine("doReadingError | Client send this message: " + string(buffer));
-				
-			     }
+			 }
 		}
 
-return finish;
+		return finish;
 
 }
 
 //put the message into mainqueuemessages ( with lock & unlock mutex)
 bool insertingMessageQueue(int sock, char *buffer){
-bufferMessage msg;
-bool finish=false;
-				//mutex lock.
-				if (SDL_LockMutex(mutexQueue) == 0) {
-					slog.writeLine("insertingMessageQueue | Inserting message '" + string(buffer) + "' into clients queue");
-					msg = structMessage(buffer);
-					finish = !writeQueueMessage(sock,1, msg,false);
-				 //mutex unlock
-				 SDL_UnlockMutex(mutexQueue);
-				}
+	bufferMessage msg;
+	bool finish=false;
+
+	//mutex lock.
+	if (SDL_LockMutex(mutexQueue) == 0) {
+		slog.writeLine("insertingMessageQueue | Inserting message '" + string(buffer) + "' into clients queue");
+		msg = structMessage(buffer);
+		finish = !writeQueueMessage(sock,1, msg,false);
+	 //mutex unlock
+	 SDL_UnlockMutex(mutexQueue);
+	}
 				
-return finish;
+	return finish;
 }
 
 
@@ -209,32 +206,31 @@ static int doReading (void *sockfd) {
 		//handle conection Exit client,Error reading
 		finish=doReadingError(n,sock,buffer);
 		
-			if (!finish){
-				//getting the messageLength
-				strncpy(messageLength,buffer,3);
-				messageSize=stoi (messageLength,nullptr,10);
+		if (!finish){
+			//getting the messageLength
+			strncpy(messageLength,buffer,3);
+			messageSize=stoi(messageLength,nullptr,10);
 
-				if (n==messageSize){//full message received.
-					finish=insertingMessageQueue(sock,buffer);
-				}else{//message incomplete.
-					int readed=n;
-					while ( readed !=messageSize){
-						n =recv(sock,buffer+readed,messageSize-readed,0);		
-						readed+=n;
-						}
-				      finish=insertingMessageQueue(sock,buffer);
-				     }
-		        }
-		   	
+			if (n==messageSize){//full message received.
+				finish=insertingMessageQueue(sock,buffer);
+			}else{//message incomplete.
+				int readed=n;
+				while ( readed !=messageSize){
+					n =recv(sock,buffer+readed,messageSize-readed,0);
+					readed+=n;
+				}
+				finish=insertingMessageQueue(sock,buffer);
+			}
+		}
 
-   } // END WHILE
+   	} // END WHILE
 	if (SDL_LockMutex(mutexCantClientes) == 0) {
          cant_con--;
  	 SDL_UnlockMutex(mutexCantClientes);	
 	}
 
-close(sock);
-return 0;
+	close(sock);
+	return 0;
 }
 
 static int doWriting (void *sockfd) {
@@ -271,7 +267,7 @@ static int doWriting (void *sockfd) {
 		}
      }
 
-return 0;
+     return 0;
 }
 
 void createAndDetachThread(SDL_ThreadFunction fn, const char *name, int data){
@@ -404,6 +400,8 @@ int main(int argc, char **argv)
 	slog.writeLine("Starting...");
 
 	leerXML(max_con,port_number);
+	slog.writeLine("Port: " + to_string(port_number));
+	slog.writeLine("Max connections: " + to_string(max_con));
 
 	createAndDetachThread(exitManager,"exitManager", 0);
 	sockfd = openAndBindSocket(port_number);
