@@ -72,8 +72,12 @@ bool writeQueueMessage(int socket, int msgid, bufferMessage message, bool socket
 
 bool check_integer(const char* value) {
   for(unsigned int i = 0; i < strlen(value); ++i) {
-    if(!isdigit(value[i]))
-      return false;
+    if(!isdigit(value[i])){
+	if((value[i]!='-')or (i!=0)){
+	return false;
+		}	
+	}
+      
   }
   return true;
 }
@@ -126,6 +130,7 @@ static int processMessages (void *data) {
 			return 1;
 		}else{
 			slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
+			
 			long response = (validate_message(msg.minfo))? 1 : 2;
 			//Writes the message in the socket's queue
 			writeQueueMessage(msg.msocket,response, msg.minfo, true);
@@ -263,7 +268,11 @@ static int doWriting (void *sockfd) {
 			slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.data));
 			//Respond to the client
 			const char* message = (msg.mtype == 1)?"Message is correct. I processed your message \n":"ERROR: Message is not correct. I can't process your message \n";
-
+			if (msg.mtype == 1){
+			slog.writeLine(message);
+			}else{
+			slog.writeErrorLine(message);
+			}
 			if(!quit){
 			n = send(sock,message,strlen(message),0);
 			if (n < 0) {
@@ -426,7 +435,7 @@ int main(int argc, char **argv)
 		 //Accept connection from client
 		 newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &cli_len);
 		 struct timeval timeout;
-		 timeout.tv_sec = 180;
+		 timeout.tv_sec = 10;
 		 timeout.tv_usec = 0;
 
 		 if (setsockopt (newsockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0)
