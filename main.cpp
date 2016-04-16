@@ -5,7 +5,7 @@
 
 #include "SDL2/SDL_thread.h"
 
-#include <string.h>
+#include <string>
 #include <stdio.h>
 #include <limits>
 #include <netinet/in.h>
@@ -22,7 +22,6 @@ using namespace queueManager;
 
 SDL_mutex *mutexQueue;
 SDL_mutex *mutexCantClientes;
-SDL_mutex *mutexQueueCliente;
 int cant_con, input_queue;
 map<int,int> socket_queue;
 Log slog;
@@ -267,18 +266,21 @@ static int doWriting (void *sockfd) {
 		}else{
 			slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.data));
 			//Respond to the client
-			const char* message = (msg.mtype == 1)?"Message is correct. I processed your message \n":"ERROR: Message is not correct. I can't process your message \n";
+			const char* message;
 			if (msg.mtype == 1){
-			slog.writeLine(message);
+				message = "Message is correct. I processed your message \n";
+				slog.writeLine(message);
 			}else{
-			slog.writeErrorLine(message);
+				message = "ERROR: Message is not correct. I can't process your message \n";
+				slog.writeErrorLine(message);
 			}
+
 			if(!quit){
-			n = send(sock,message,strlen(message),0);
-			if (n < 0) {
-			  slog.writeErrorLine("doWriting | ERROR writing to socket");
-			  finish = true;
-			}
+				n = send(sock,message,strlen(message),0);
+				if (n < 0) {
+					slog.writeErrorLine("doWriting | ERROR writing to socket");
+					finish = true;
+				}
 			}
 		}
      }
@@ -367,7 +369,9 @@ static int exitManager (void *data) {
 		  cant_con --;
 	  }
 	 
-	  
+
+      SDL_DestroyMutex(mutexQueue);
+      SDL_DestroyMutex(mutexCantClientes);
 	  slog.writeLine("Application closed.");
 
 	  exit(0);
@@ -409,7 +413,6 @@ int main(int argc, char **argv)
 	struct sockaddr_in cli_addr;
    	mutexQueue = SDL_CreateMutex();
 	mutexCantClientes = SDL_CreateMutex();
-	mutexQueueCliente = SDL_CreateMutex();
 	cant_con = 0;
 
 	//Log initialize
@@ -452,12 +455,13 @@ int main(int argc, char **argv)
 				close(newsockfd);
 			}else{
 				send(newsockfd,"Connected \n",12,0);
-				cant_con++;
+				if (SDL_LockMutex(mutexCantClientes) == 0) {
+					cant_con++;
+					SDL_UnlockMutex(mutexCantClientes);
+				}
 				manageNewConnection(newsockfd);
 			}
 		}
 	}
-        SDL_DestroyMutex(mutexQueue);
-	SDL_DestroyMutex(mutexCantClientes);
     return 1;
 }
