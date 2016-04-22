@@ -261,3 +261,12 @@ type_datosCliente Parser::parseXMLCliente(const char * nombreArchivo, Log* log) 
 }
 
 
+class myexception: public exception
+{
+  virtual const char* what() const throw() { return "METODO EN DESARROLLO!"; }
+} NotImplementedException;
+
+type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * log){
+	throw NotImplementedException;
+}
+
