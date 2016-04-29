@@ -47,7 +47,7 @@ namespace Parser {
 	// DATOS RELACIONADOS CON LA SEGUNDA ENTREGA.
 	// ================================================================================
 
-	enum spriteType {AVION, DISPARO, AGUA, ISLA, VUELTA};
+	enum spriteType {AVION, DISPARO, AGUA, ISLA, VUELTA, BLANCO};
 
 	struct type_Ventana{
 		int ancho;
@@ -56,7 +56,7 @@ namespace Parser {
 
 	struct type_Sprite{
 		spriteType id;
-		string path;
+		char* path;
 		int cantidad;
 		int ancho;
 		int alto;
@@ -90,6 +90,7 @@ namespace Parser {
 	};
 
 	struct type_DatosGraficos{
+		int logLevel;
 		type_Ventana ventana;
 		list<type_Sprite> sprites;
 		type_Escenario escenario;
@@ -102,6 +103,7 @@ namespace Parser {
 
 	const char* getDefaultNameServer();
 	const char* getDefaultNameClient();
+	const char* getDefaultNameServerMap();
 
 	// ================================================================================
 	// METODOS RELACIONADOS CON LA PRIMER ENTREGA.

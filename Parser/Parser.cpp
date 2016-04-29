@@ -90,6 +90,15 @@ const char* Parser::getDefaultNameServer(){
 	return "defaultServerXML.xml";
 }
 
+const char* Parser::getDefaultNameServerMap(){
+	return "defaultServerMapXML.xml";
+}
+
+const char* Parser::getDefaultNameClient(){
+	return "defaultClienteXML.xml";
+}
+
+
 bool validarUnicidadID(map<int,type_mensaje> * mensajes) {
 	int totMsj = mensajes->size();
 	type_mensaje mensaje;
@@ -180,10 +189,6 @@ type_datosServer Parser::parseXMLServer(const char * nombreArchivo, Log * log) {
 
 }
 
-const char* Parser::getDefaultNameClient(){
-	return "defaultClienteXML.xml";
-}
-
 type_datosCliente Parser::parseXMLCliente(const char * nombreArchivo, Log* log) {
 	xml_document<> archivo;
 	xml_node<> * nodo_raiz;
@@ -266,7 +271,236 @@ class myexception: public exception
   virtual const char* what() const throw() { return "METODO EN DESARROLLO!"; }
 } NotImplementedException;
 
+// Los tipos de Sprites son los siguientes: AVION, DISPARO, AGUA, ISLA, VUELTA, BLANCO
+spriteType formatTipoSprite(char * tipo) {
+	if (strcmp(tipo,"AVION")==0)
+		return AVION;
+	if (strcmp(tipo,"DISPARO")==0)
+		return DISPARO;
+	if (strcmp(tipo,"AGUA")==0)
+		return AGUA;
+	if (strcmp(tipo,"ISLA")==0)
+		return ISLA;
+	if (strcmp(tipo,"VUELTA")==0)
+		return VUELTA;
+	return BLANCO;
+}
+
+//===================VALORES DEFAULT====================================
+string default_level="1";
+string default_ventana_ancho = "800";
+string default_ventana_alto = "600";
+string default_sprite_ancho = "10";
+string default_sprite_alto = "10";
+string default_sprite_cantidad = "1";
+string default_escenario_alto = "1000";
+string default_escenario_ancho = "100";
+string default_fondo_alto = "10";
+string default_fondo_ancho = "10";
+string default_elemento_posicion_x = "10";
+string default_elemento_posicion_y = "15";
+string default_velDesplazamiento = "10";
+string default_velocidadDisparos = "6";
+string default_sprite_path = "Images/vacio.png";
+//===================VALORES DEFAULT====================================
+
+
 type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * log){
-	throw NotImplementedException;
+	xml_document<> archivo;
+	xml_node<> * nodo_raiz;
+
+	// Chequeamos la existencia del archivo ingresado por el cliente.
+	ifstream elArchivo (nombreArchivo);
+	if (!elArchivo.good()) {
+		log->writeErrorLine("Archivo inexistente, se usa el default");
+		return parseXMLServerMap(getDefaultNameClient(), log);
+	}
+
+	// Validamos el formato y la estructura del archivo.
+	bool formatoCorrecto;
+	validarFormato(nombreArchivo, "schemaServerMap.xsd", formatoCorrecto);
+	if (!formatoCorrecto){
+		log->writeErrorLine("Archivo con formato invalido, se usa el default.");
+		return parseXMLServerMap(getDefaultNameClient(), log);
+	}
+
+	vector<char> buffer((istreambuf_iterator<char>(elArchivo)), istreambuf_iterator<char>());
+	buffer.push_back('\0');
+
+	archivo.parse<0>(&buffer[0]);
+
+	nodo_raiz = archivo.first_node("Servidor");
+
+	type_DatosGraficos graficos;
+	type_Avion avion;
+	type_Escenario escenario;
+	type_Fondo fondo;
+	type_Ventana ventana;
+
+	//===========================LOG===============================
+	// Obtenemos la información del nodo referente al LOG.
+	xml_node<> * nodo_log = nodo_raiz->first_node("log");
+	char* level = nodo_log->value();
+	// Validamos la información contenida en el nodo: LOG.
+	if(!sonDigitos(level)){ level = strdup(default_level.c_str()); }
+	// Resguardamos la información obtenida en el nodo: LOG.
+	graficos.logLevel = atoi(level);
+	//===========================LOG===============================
+
+	//=========================VENTANA=============================
+	// Obtenemos la información del nodo referente a VENTANA.
+	xml_node<> * nodo_ventana = nodo_raiz->first_node("ventana");
+	xml_node<> * nodo_ventana_ancho = nodo_ventana->first_node("ancho");
+	char* ventana_ancho = nodo_ventana_ancho->value();
+	xml_node<> * nodo_ventana_alto = nodo_ventana->first_node("alto");
+	char* ventana_alto = nodo_ventana_alto->value();
+	// Validamos la información contenida en el nodo: VENTANA.
+	if(!sonDigitos(ventana_ancho) || !sonDigitos(ventana_alto))
+	{ 	ventana_ancho=strdup(default_ventana_ancho.c_str());
+		ventana_alto=strdup(default_ventana_alto.c_str()); }
+	// Resguardamos la información obtenida en el nodo: VENTANA.
+	ventana.ancho = atoi(ventana_ancho);
+	ventana.alto = atoi(ventana_alto);
+	graficos.ventana = ventana;
+	//=========================VENTANA=============================
+
+	//==========================SPRITE=============================
+	// Obtenemos la información del nodo referente a SPRITES.
+	xml_node<> * nodo_sprites = nodo_raiz->first_node("sprites");
+	char* sprite_id; char* sprite_path; char* sprite_cantidad;
+	char* sprite_ancho; char* sprite_alto;
+	// Recorremos cada sprite dentro de la nodo que los incluye.
+	for (xml_node<> * nodo_sprite = nodo_sprites->first_node("sprite"); nodo_sprite; nodo_sprite = nodo_sprite->next_sibling()) {
+
+		type_Sprite sprite;
+
+		xml_node<> * nodo_sprite_id = nodo_sprite->first_node("id");
+		sprite_id = nodo_sprite_id->value();
+		xml_node<> * nodo_sprite_path = nodo_sprite->first_node("path");
+		sprite_path = nodo_sprite_path->value();
+		xml_node<> * nodo_sprite_cantidad = nodo_sprite->first_node("cantidad");
+		sprite_cantidad = nodo_sprite_cantidad->value();
+		xml_node<> * nodo_sprite_ancho = nodo_sprite->first_node("ancho");
+		sprite_ancho = nodo_sprite_ancho->value();
+		xml_node<> * nodo_sprite_alto = nodo_sprite->first_node("alto");
+		sprite_alto = nodo_sprite_alto->value();
+		// Validamos la información contenida en el nodo: SPRITES.
+		if(!sonDigitos(sprite_ancho) || !sonDigitos(sprite_alto))
+		{ 	sprite_ancho = strdup(default_sprite_ancho.c_str());
+			sprite_alto = strdup(default_sprite_alto.c_str()); }
+		if(!sonDigitos(sprite_cantidad))
+		{ sprite_cantidad =  strdup(default_sprite_cantidad.c_str()); }
+		// Chequeamos la existencia del archivo imagen en cuestión.
+		ifstream elSprite (sprite_path);
+		if (!elSprite.good()) {
+			log->writeWarningLine("Archivo inexistente, se usa la imagen default");
+			sprite_path = strdup(default_sprite_path.c_str());
+		}
+		// Resguardamos la información obtenida en el nodo: SPRITES.
+		sprite.id = formatTipoSprite(sprite_id);
+		sprite.path = sprite_path;
+		sprite.cantidad;
+		sprite.ancho;
+		sprite.alto;
+		// Lo agregamos a la lista principal de SPRITES.
+		graficos.sprites.push_back(sprite);
+	}
+	//==========================SPRITE=============================
+
+	//========================ESCENARIO============================
+	// Obtenemos la información del nodo referente a ESCENARIO.
+	xml_node<> * nodo_escenario = nodo_raiz->first_node("escenario");
+	xml_node<> * nodo_escenario_ancho = nodo_escenario->first_node("ancho");
+	char* escenario_ancho = nodo_escenario_ancho->value();
+	xml_node<> * nodo_escenario_alto = nodo_escenario->first_node("alto");
+	char* escenario_alto = nodo_escenario_alto->value();
+	// Validamos la información contenida en el nodo: ESCENARIO.
+	if(!sonDigitos(escenario_ancho) || !sonDigitos(escenario_alto))
+	{ 	escenario_ancho = strdup(default_escenario_ancho.c_str());
+		escenario_alto = strdup(default_escenario_alto.c_str());  }
+	// Resguardamos la información obtenida en el nodo: ESCENARIO.
+	escenario.ancho = atoi(escenario_ancho);
+	escenario.alto = atoi(escenario_alto);
+	//========================ESCENARIO============================
+
+	//=========================FONDO==============================
+	// ESCENARIO >> Obtenemos la información del nodo referente a FONDO.
+	xml_node<> * nodo_fondo = nodo_escenario->first_node("fondo");
+	xml_node<> * nodo_spriteId = nodo_fondo->first_node("spriteId");
+	char* fondo_sprite_Id = nodo_spriteId->value();
+	xml_node<> * nodo_fondo_ancho = nodo_fondo->first_node("ancho");
+	char* fondo_ancho = nodo_fondo_ancho->value();
+	xml_node<> * nodo_fondo_alto = nodo_fondo->first_node("alto");
+	char* fondo_alto = nodo_fondo_alto->value();
+	// Validamos la información contenida en el nodo: FONDO.
+	if(!sonDigitos(fondo_ancho) || !sonDigitos(fondo_alto))
+	{ 	fondo_ancho = strdup(default_fondo_ancho.c_str());
+		fondo_alto = strdup(default_fondo_alto.c_str()); }
+	// Resguardamos la información obtenida en el nodo: FONDO.
+	fondo.ancho = atoi(fondo_ancho);
+	fondo.alto = atoi(fondo_alto);
+	fondo.spriteId = formatTipoSprite(fondo_sprite_Id);
+	escenario.fondo = fondo;
+	//=========================FONDO==============================
+
+	//=======================ELEMENTO=============================
+	// ESCENARIO >> Obtenemos la información del nodo referente a ELEMENTOS.
+	xml_node<> * nodo_elementos = nodo_escenario->first_node("elementos");
+	char* sprite_elemento_id;
+	char* elemento_posicion_x;
+	char* elemento_posicion_y;
+	// Recorremos cada sprite dentro de la nodo que los incluye.
+	for (xml_node<> * nodo_elemento = nodo_elementos->first_node("elemento"); nodo_elemento; nodo_elemento = nodo_elemento->next_sibling()) {
+
+		type_Elemento elemento;
+
+		xml_node<> * nodo_elemento_spriteId = nodo_elemento->first_node("spriteId");
+		sprite_elemento_id = nodo_elemento_spriteId->value();
+		xml_node<> * nodo_elemento_posicion = nodo_elemento->first_node("posicion");
+		xml_node<> * nodo_elemento_posicion_x = nodo_elemento_posicion->first_node("x");
+		elemento_posicion_x = nodo_elemento_posicion_x->value();
+		xml_node<> * nodo_elemento_posicion_y = nodo_elemento_posicion->first_node("y");
+		elemento_posicion_y = nodo_elemento_posicion_y->value();
+		// Validamos la información contenida en el nodo: ELEMENTOS.
+		if(!sonDigitos(elemento_posicion_x) || !sonDigitos(elemento_posicion_y))
+		{ 	elemento_posicion_x = strdup(default_elemento_posicion_x.c_str());
+			elemento_posicion_y = strdup(default_elemento_posicion_y.c_str());  }
+		// Resguardamos la información obtenida en el nodo: ELEMENTOS.
+		elemento.spriteId = formatTipoSprite(sprite_elemento_id);
+		elemento.posicionX = atoi(elemento_posicion_x);
+		elemento.posicionY = atoi(elemento_posicion_y);
+		escenario.elementos.push_back(elemento);
+	}
+	//=======================ELEMENTO=============================
+
+	//==========================AVION==============================
+	// Obtenemos la información del nodo referente a AVION.
+	xml_node<> * nodo_avion = nodo_raiz->first_node("avion");
+	xml_node<> * nodo_velDesplazamiento = nodo_avion->first_node("velDesplazamiento");
+	char* velDesplazamiento = nodo_velDesplazamiento->value();
+	xml_node<> * nodo_velocidadDisparos = nodo_avion->first_node("velocidadDisparos");
+	char* velocidadDisparos = nodo_velocidadDisparos->value();
+	xml_node<> * nodo_avionSpriteId = nodo_avion->first_node("avionSpriteId");
+	char* avionSpriteId = nodo_avionSpriteId->value();
+	xml_node<> * nodo_vueltaSpriteId = nodo_avion->first_node("vueltaSpriteId");
+	char* vueltaSpriteId = nodo_vueltaSpriteId->value();
+	xml_node<> * nodo_disparosSpriteId = nodo_avion->first_node("disparosSpriteId");
+	char* disparosSpriteId = nodo_disparosSpriteId->value();
+	// Validamos la información contenida en el nodo: AVION
+	if(!sonDigitos(velDesplazamiento))
+	{ velDesplazamiento =  strdup(default_velDesplazamiento.c_str()); }
+	if(!sonDigitos(velocidadDisparos))
+	{ velocidadDisparos =  strdup(default_velocidadDisparos.c_str()); }
+	// Resguardamos la información obtenida en el nodo: AVION.
+	avion.velocidadDesplazamiento = atoi(velDesplazamiento);
+	avion.velocidadDisparos = atoi(velocidadDisparos);
+	avion.avionSpriteId = formatTipoSprite(avionSpriteId);
+	avion.vueltaSpriteId = formatTipoSprite(vueltaSpriteId);
+	avion.disparosSpriteId = formatTipoSprite(disparosSpriteId);
+	graficos.avion = avion;
+	//==========================AVION==============================
+
+	// Terminamos devolviendo el elemento del tipo: type_DatosGraficos.
+	return graficos;
 }
 

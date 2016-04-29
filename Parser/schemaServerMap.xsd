@@ -1,0 +1,90 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="servidor">
+    <xs:complexType>
+      <xs:sequence>
+      
+        <xs:element type="xs:byte" name="log"/>
+        
+        <xs:element name="ventana">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="ancho"/>
+              <xs:element type="xs:string" name="alto"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="sprites">
+          <xs:complexType>
+            <xs:sequence>
+		        <xs:element name="sprite" maxOccurs="unbounded" minOccurs="0">
+		          <xs:complexType>
+		            <xs:sequence>
+		              <xs:element type="xs:string" name="id"/>
+		              <xs:element type="xs:string" name="path"/>
+		              <xs:element type="xs:string" name="cantidad"/>
+		              <xs:element type="xs:string" name="ancho"/>
+		              <xs:element type="xs:string" name="alto"/>
+		            </xs:sequence>
+		          </xs:complexType>
+		        </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        
+        <xs:element name="escenario">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:byte" name="ancho"/>
+              <xs:element type="xs:byte" name="alto"/>
+		      	<xs:element name="fondo">
+		          	  <xs:complexType>
+	            		<xs:sequence>
+			              <xs:element type="xs:string" name="spriteId"/>
+			              <xs:element type="xs:string" name="ancho"/>
+			              <xs:element type="xs:string" name="alto"/>
+			            </xs:sequence>
+			          </xs:complexType>
+		        </xs:element>
+		        <xs:element name="elementos">
+		          <xs:complexType>
+		            <xs:sequence>
+				        <xs:element name="elemento" maxOccurs="unbounded" minOccurs="0">
+				          <xs:complexType>
+				            <xs:sequence>
+				              <xs:element type="xs:string" name="spriteId"/>
+						        <xs:element name="posicion">
+						          <xs:complexType>
+						            <xs:sequence>
+						              <xs:element type="xs:string" name="x"/>
+						              <xs:element type="xs:string" name="y"/>
+						            </xs:sequence>
+						          </xs:complexType>
+						        </xs:element>
+				            </xs:sequence>
+				          </xs:complexType>
+				        </xs:element>
+		            </xs:sequence>
+		          </xs:complexType>
+		        </xs:element>
+	         </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="avion">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="velDesplazamiento"/>
+              <xs:element type="xs:string" name="velocidadDisparos"/>
+              <xs:element type="xs:string" name="avionSpriteId"/>
+              <xs:element type="xs:string" name="vueltaSpriteId"/>
+              <xs:element type="xs:string" name="disparosSpriteId"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
