@@ -1,0 +1,58 @@
+<servidor>
+	<log>1</log>
+	<ventana>
+		<ancho>800</ancho>
+		<alto>600</alto>
+	</ventana>
+	
+	<sprites>
+		<sprite>
+			<id> avion </id>
+			<path> path/a/avion.png </path>
+			<cantidad>1</cantidad>
+			<ancho>10</ancho>
+			<alto>10</alto>
+		<sprite>
+		<sprite>
+			<id> disparo </id>
+			<path> path/a/disparo.png </path>
+			<cantidad>1</cantidad>
+			<ancho>5</ancho>
+			<alto>5</alto>
+		<sprite>
+	</sprites>
+	
+	<escenario>
+		<ancho>100</ancho>
+		<alto>1000</alto>
+		<fondo>
+			<spriteId>agua</spriteId>
+			<ancho>10</ancho>
+			<alto>10</alto>
+		</fondo>
+		<elementos>
+			<elemento>
+				<spriteId>isla</spriteId>
+				<posicion>
+					<x>10</x>
+					<y>15</y>
+				</posicion>
+			</elemento>
+			<elemento>
+				<spriteId>isla</spriteId>
+				<posicion>
+					<x>15</x>
+					<y>20</y>
+				</posicion>
+			</elemento>
+		</elementos>
+	</escenario>
+	
+	<avion>
+		<velocidadDesplazamiento>10</velDesplazamiento>
+		<velocidadDisparos>6</velocidadDisparos>
+		<avionSpriteId>avion</avionSpriteId>
+		<vueltaSpriteId>vuelta</vueltaSpriteId>
+		<disparosSpriteId>disparo</disparosSpriteId>
+	</avion>
+</servidor>
