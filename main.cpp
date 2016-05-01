@@ -397,7 +397,6 @@ void leerXML(int &cantMaxClientes, int &puerto){
 			slog.writeWarningLine("Se toma el XML de default");
 			path = getDefaultNameServer();
 		}
-
 	}
 
 	xml = parseXMLServer(path.c_str(), &slog);

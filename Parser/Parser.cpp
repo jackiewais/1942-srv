@@ -23,11 +23,21 @@
 #include "xercesc/parsers/XercesDOMParser.hpp"
 #include <arpa/inet.h>
 
-
 using namespace std;
 using namespace rapidxml;
 using namespace Parser;
 using namespace xercesc;
+
+char* toUpercase(char* tipo){
+	int i = 0;
+	char c;
+	while (tipo[i]){
+		c = tipo[i];
+		tipo[i] = toupper(c);
+		i++;
+	}
+	return tipo;
+}
 
 messageType formatTipoMsj(char * tipo) {
 	if (strcmp(tipo,"INT")==0 || strcmp(tipo,"INTEGER")==0)
@@ -125,6 +135,8 @@ void validarFormato(const char * nombreArchivo,const char * schemaPath, bool &XM
 		XercesDOMParser domParser;
 		if (domParser.loadGrammar(schemaPath, Grammar::SchemaGrammarType) == NULL){
 			XMLValido = false;
+
+			cout << "EN: loadGrammar" << endl;
 		} else {
 			DefaultErrorHandler * errorHandler = new DefaultErrorHandler;
 
@@ -137,8 +149,10 @@ void validarFormato(const char * nombreArchivo,const char * schemaPath, bool &XM
 			domParser.setExternalNoNamespaceSchemaLocation(schemaPath);
 
 			domParser.parse(nombreArchivo);
-			if(domParser.getErrorCount() != 0)
+			if(domParser.getErrorCount() != 0){
 				XMLValido = false;
+				cout << "EN: getErrorCount" << endl;
+			}
 			else
 				XMLValido = true;
 		}
@@ -309,27 +323,31 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 	xml_document<> archivo;
 	xml_node<> * nodo_raiz;
 
+	log->writeLine("Comenzamos a validar la EXISTENCIA del archivo.");
 	// Chequeamos la existencia del archivo ingresado por el cliente.
 	ifstream elArchivo (nombreArchivo);
 	if (!elArchivo.good()) {
 		log->writeErrorLine("Archivo inexistente, se usa el default");
-		return parseXMLServerMap(getDefaultNameClient(), log);
+		return parseXMLServerMap(getDefaultNameServerMap(), log);
 	}
+	log->writeLine("Validación exitosa sobre la EXISTENCIA del archivo.");
 
+	log->writeLine("Comenzamos a validar la ESTRUCTURA del archivo.");
 	// Validamos el formato y la estructura del archivo.
 	bool formatoCorrecto;
 	validarFormato(nombreArchivo, "schemaServerMap.xsd", formatoCorrecto);
 	if (!formatoCorrecto){
 		log->writeErrorLine("Archivo con formato invalido, se usa el default.");
-		return parseXMLServerMap(getDefaultNameClient(), log);
+		return parseXMLServerMap(getDefaultNameServerMap(), log);
 	}
+	log->writeLine("Validación exitosa sobre la ESTRUCTURA del archivo.");
 
 	vector<char> buffer((istreambuf_iterator<char>(elArchivo)), istreambuf_iterator<char>());
 	buffer.push_back('\0');
 
 	archivo.parse<0>(&buffer[0]);
 
-	nodo_raiz = archivo.first_node("Servidor");
+	nodo_raiz = archivo.first_node("servidor");
 
 	type_DatosGraficos graficos;
 	type_Avion avion;
@@ -337,16 +355,20 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 	type_Fondo fondo;
 	type_Ventana ventana;
 
+	log->writeLine("Comenzamos a validar y obtener los datos sobre el LOG del archivo.");
 	//===========================LOG===============================
 	// Obtenemos la información del nodo referente al LOG.
 	xml_node<> * nodo_log = nodo_raiz->first_node("log");
 	char* level = nodo_log->value();
 	// Validamos la información contenida en el nodo: LOG.
-	if(!sonDigitos(level)){ level = strdup(default_level.c_str()); }
+	if(!sonDigitos(level)){ level = strdup(default_level.c_str());
+		log->writeWarningLine("Valor para el LOG invalido, usamos el valor por defecto.");}
 	// Resguardamos la información obtenida en el nodo: LOG.
 	graficos.logLevel = atoi(level);
 	//===========================LOG===============================
+	log->writeLine("Hemos obtenido los datos sobre el LOG del archivo exitosamente.");
 
+	log->writeLine("Comenzamos a validar y obtener los datos sobre la VENTANA del archivo.");
 	//=========================VENTANA=============================
 	// Obtenemos la información del nodo referente a VENTANA.
 	xml_node<> * nodo_ventana = nodo_raiz->first_node("ventana");
@@ -357,13 +379,16 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 	// Validamos la información contenida en el nodo: VENTANA.
 	if(!sonDigitos(ventana_ancho) || !sonDigitos(ventana_alto))
 	{ 	ventana_ancho=strdup(default_ventana_ancho.c_str());
-		ventana_alto=strdup(default_ventana_alto.c_str()); }
+		ventana_alto=strdup(default_ventana_alto.c_str());
+		log->writeWarningLine("Valoar para el ancho y alto de la VENTANA invalido, usamos valores por defecto.");}
 	// Resguardamos la información obtenida en el nodo: VENTANA.
 	ventana.ancho = atoi(ventana_ancho);
 	ventana.alto = atoi(ventana_alto);
 	graficos.ventana = ventana;
 	//=========================VENTANA=============================
+	log->writeLine("Hemos obtenido los datos sobre la VENTANA del archivo exitosamente.");
 
+	log->writeLine("Comenzamos a validar y obtener los datos sobre los SPRITES del archivo.");
 	//==========================SPRITE=============================
 	// Obtenemos la información del nodo referente a SPRITES.
 	xml_node<> * nodo_sprites = nodo_raiz->first_node("sprites");
@@ -387,17 +412,19 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 		// Validamos la información contenida en el nodo: SPRITES.
 		if(!sonDigitos(sprite_ancho) || !sonDigitos(sprite_alto))
 		{ 	sprite_ancho = strdup(default_sprite_ancho.c_str());
-			sprite_alto = strdup(default_sprite_alto.c_str()); }
+			sprite_alto = strdup(default_sprite_alto.c_str());
+			log->writeWarningLine("Valoar para el ancho y alto del SPRITE invalido, usamos valores por defecto.");}
 		if(!sonDigitos(sprite_cantidad))
-		{ sprite_cantidad =  strdup(default_sprite_cantidad.c_str()); }
+		{ sprite_cantidad =  strdup(default_sprite_cantidad.c_str());
+		log->writeWarningLine("Valoar para la cantidad del SPRITE invalido, usamos valores por defecto.");}
 		// Chequeamos la existencia del archivo imagen en cuestión.
 		ifstream elSprite (sprite_path);
 		if (!elSprite.good()) {
-			log->writeWarningLine("Archivo inexistente, se usa la imagen default");
 			sprite_path = strdup(default_sprite_path.c_str());
+			log->writeWarningLine("Archivo inexistente para el path del SPRITE, se usa la imagen default.");
 		}
 		// Resguardamos la información obtenida en el nodo: SPRITES.
-		sprite.id = formatTipoSprite(sprite_id);
+		sprite.id = formatTipoSprite(toUpercase(sprite_id));
 		sprite.path = sprite_path;
 		sprite.cantidad;
 		sprite.ancho;
@@ -406,7 +433,9 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 		graficos.sprites.push_back(sprite);
 	}
 	//==========================SPRITE=============================
+	log->writeLine("Hemos obtenido los datos sobre los SPRITES del archivo exitosamente.");
 
+	log->writeLine("Comenzamos a validar y obtener los datos sobre el ESCENARIO del archivo.");
 	//========================ESCENARIO============================
 	// Obtenemos la información del nodo referente a ESCENARIO.
 	xml_node<> * nodo_escenario = nodo_raiz->first_node("escenario");
@@ -417,12 +446,15 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 	// Validamos la información contenida en el nodo: ESCENARIO.
 	if(!sonDigitos(escenario_ancho) || !sonDigitos(escenario_alto))
 	{ 	escenario_ancho = strdup(default_escenario_ancho.c_str());
-		escenario_alto = strdup(default_escenario_alto.c_str());  }
+		escenario_alto = strdup(default_escenario_alto.c_str());
+		log->writeWarningLine("Valoar para el ancho y alto del ESCENARIO invalido, usamos valores por defecto.");}
 	// Resguardamos la información obtenida en el nodo: ESCENARIO.
 	escenario.ancho = atoi(escenario_ancho);
 	escenario.alto = atoi(escenario_alto);
 	//========================ESCENARIO============================
+	log->writeLine("Hemos obtenido los datos sobre el ESCENARIO del archivo exitosamente.");
 
+	log->writeLine("Comenzamos a validar y obtener los datos sobre el FONDO del archivo.");
 	//=========================FONDO==============================
 	// ESCENARIO >> Obtenemos la información del nodo referente a FONDO.
 	xml_node<> * nodo_fondo = nodo_escenario->first_node("fondo");
@@ -435,14 +467,17 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 	// Validamos la información contenida en el nodo: FONDO.
 	if(!sonDigitos(fondo_ancho) || !sonDigitos(fondo_alto))
 	{ 	fondo_ancho = strdup(default_fondo_ancho.c_str());
-		fondo_alto = strdup(default_fondo_alto.c_str()); }
+		fondo_alto = strdup(default_fondo_alto.c_str());
+		log->writeWarningLine("Valoar para el ancho y alto del FONDO invalido, usamos valores por defecto.");}
 	// Resguardamos la información obtenida en el nodo: FONDO.
 	fondo.ancho = atoi(fondo_ancho);
 	fondo.alto = atoi(fondo_alto);
-	fondo.spriteId = formatTipoSprite(fondo_sprite_Id);
+	fondo.spriteId = formatTipoSprite(toUpercase(fondo_sprite_Id));
 	escenario.fondo = fondo;
 	//=========================FONDO==============================
+	log->writeLine("Hemos obtenido los datos sobre el FONDO del archivo exitosamente.");
 
+	log->writeLine("Comenzamos a validar y obtener los datos sobre los ELEMENTOS del archivo.");
 	//=======================ELEMENTO=============================
 	// ESCENARIO >> Obtenemos la información del nodo referente a ELEMENTOS.
 	xml_node<> * nodo_elementos = nodo_escenario->first_node("elementos");
@@ -464,15 +499,19 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 		// Validamos la información contenida en el nodo: ELEMENTOS.
 		if(!sonDigitos(elemento_posicion_x) || !sonDigitos(elemento_posicion_y))
 		{ 	elemento_posicion_x = strdup(default_elemento_posicion_x.c_str());
-			elemento_posicion_y = strdup(default_elemento_posicion_y.c_str());  }
+			elemento_posicion_y = strdup(default_elemento_posicion_y.c_str());
+			log->writeWarningLine("Valoar para la posición del ELEMENTO invalido, usamos valores por defecto.");}
 		// Resguardamos la información obtenida en el nodo: ELEMENTOS.
-		elemento.spriteId = formatTipoSprite(sprite_elemento_id);
+		elemento.spriteId = formatTipoSprite(toUpercase(sprite_elemento_id));
 		elemento.posicionX = atoi(elemento_posicion_x);
 		elemento.posicionY = atoi(elemento_posicion_y);
 		escenario.elementos.push_back(elemento);
 	}
+	graficos.escenario = escenario;
 	//=======================ELEMENTO=============================
+	log->writeLine("Hemos obtenido los datos sobre los ELEMENTOS del archivo exitosamente.");
 
+	log->writeLine("Comenzamos a validar y obtener los datos sobre el AVION del archivo.");
 	//==========================AVION==============================
 	// Obtenemos la información del nodo referente a AVION.
 	xml_node<> * nodo_avion = nodo_raiz->first_node("avion");
@@ -488,18 +527,22 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 	char* disparosSpriteId = nodo_disparosSpriteId->value();
 	// Validamos la información contenida en el nodo: AVION
 	if(!sonDigitos(velDesplazamiento))
-	{ velDesplazamiento =  strdup(default_velDesplazamiento.c_str()); }
+	{ velDesplazamiento =  strdup(default_velDesplazamiento.c_str());
+	log->writeWarningLine("Valoar para la VELOCIDAD DE DESPLAZAMIENTO invalido, usamos valores por defecto.");}
 	if(!sonDigitos(velocidadDisparos))
-	{ velocidadDisparos =  strdup(default_velocidadDisparos.c_str()); }
+	{ velocidadDisparos =  strdup(default_velocidadDisparos.c_str());
+	log->writeWarningLine("Valoar para la VELOCIDAD DE DISPAROS invalido, usamos valores por defecto.");}
 	// Resguardamos la información obtenida en el nodo: AVION.
 	avion.velocidadDesplazamiento = atoi(velDesplazamiento);
 	avion.velocidadDisparos = atoi(velocidadDisparos);
-	avion.avionSpriteId = formatTipoSprite(avionSpriteId);
-	avion.vueltaSpriteId = formatTipoSprite(vueltaSpriteId);
-	avion.disparosSpriteId = formatTipoSprite(disparosSpriteId);
+	avion.avionSpriteId = formatTipoSprite(toUpercase(avionSpriteId));
+	avion.vueltaSpriteId = formatTipoSprite(toUpercase(vueltaSpriteId));
+	avion.disparosSpriteId = formatTipoSprite(toUpercase(disparosSpriteId));
 	graficos.avion = avion;
 	//==========================AVION==============================
+	log->writeLine("Hemos obtenido los datos sobre el AVION del archivo exitosamente.");
 
+	log->writeLine("Devolvemos los datos del XML parseados.");
 	// Terminamos devolviendo el elemento del tipo: type_DatosGraficos.
 	return graficos;
 }

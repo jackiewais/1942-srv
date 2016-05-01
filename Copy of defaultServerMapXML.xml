@@ -3,25 +3,23 @@
 	<ventana>
 		<ancho>800</ancho>
 		<alto>600</alto>
-	</ventana>
-	
+	</ventana>	
 	<sprites>
 		<sprite>
-			<id> avion </id>
-			<path> path/a/avion.png </path>
+			<id>avion</id>
+			<path>Images/vacio.png</path>
 			<cantidad>1</cantidad>
 			<ancho>10</ancho>
 			<alto>10</alto>
+		</sprite>
 		<sprite>
-		<sprite>
-			<id> disparo </id>
-			<path> path/a/disparo.png </path>
+			<id>disparo</id>
+			<path>Images/vacio.png</path>
 			<cantidad>1</cantidad>
 			<ancho>5</ancho>
 			<alto>5</alto>
-		<sprite>
-	</sprites>
-	
+		</sprite>
+	</sprites>	
 	<escenario>
 		<ancho>100</ancho>
 		<alto>1000</alto>
@@ -47,9 +45,8 @@
 			</elemento>
 		</elementos>
 	</escenario>
-	
 	<avion>
-		<velocidadDesplazamiento>10</velDesplazamiento>
+		<velDesplazamiento>10</velDesplazamiento>
 		<velocidadDisparos>6</velocidadDisparos>
 		<avionSpriteId>avion</avionSpriteId>
 		<vueltaSpriteId>vuelta</vueltaSpriteId>
