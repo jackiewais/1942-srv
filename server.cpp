@@ -473,7 +473,7 @@ int main(int argc, char **argv)
 		 //Accept connection from client
 		 newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &cli_len);
 		 struct timeval timeout;
-		 timeout.tv_sec = 10;
+		 timeout.tv_sec = 120;
 		 timeout.tv_usec = 0;
 
 		 if (setsockopt (newsockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0)
