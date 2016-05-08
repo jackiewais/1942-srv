@@ -230,7 +230,7 @@ static int doReading (void *sockfd) {
 		else{
 			//getting the messageLength
 			strncpy(messageLength,buffer,3);
-			messageSize=stoi(messageLength,nullptr,10);
+			messageSize=atoi(messageLength);
 
 			if (n==messageSize){//full message received.
 				finish=insertingMessageQueue(sock,buffer);
