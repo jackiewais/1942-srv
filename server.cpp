@@ -11,10 +11,13 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <ctype.h>
+#include "Elemento/Elemento.h"
 #include "Logger/Log.h"
 #include "Utils/queueManager.h"
+#include "Utils/messages.h"
 #include "Parser/Parser.h"
 
+#define BUFLEN 1000
 
 using namespace std;
 using namespace Parser;
@@ -22,45 +25,27 @@ using namespace queueManager;
 
 SDL_mutex *mutexQueue;
 SDL_mutex *mutexCantClientes;
+SDL_mutex *mutexClientState;
 int cant_con, input_queue;
 map<int,int> socket_queue;
+map<int,bool> client_state;
+map<int,Elemento*> elementos;
 Log slog;
 bool quit=false;
 
 
 //====================================================================================================
 
-struct bufferMessage structMessage(char *buffer){
 
- 	 bufferMessage msg;
-
- 	 int OffsetId = lengthMessage;
- 	 int OffsetType= lengthMessage + lengthId ;
- 	 int OffsetData= lengthMessage + lengthId + lengthType;
-
-	 bzero(msg.id,lengthId+1);
-	 bzero(msg.type,lengthType+1);
-	 bzero(msg.data,lengthData+1);
-
-	 strncpy(msg.id,buffer+OffsetId,lengthId);
-	 strncpy(msg.type,buffer+OffsetType,lengthType);
-	 strncpy(msg.data,buffer+OffsetData,lengthData);
-
- return msg;
-}
-
-bool writeQueueMessage(int socket, int msgid, bufferMessage message, bool socketQueue){
+bool writeQueueMessage(int socket, struct gst** messages, int msgQty, bool socketQueue){
 //When socketQueue = true writes on the socket queue. If its false, writes on the input queue
 	msg_buf msg;
 	int msgqid;
 
 	// message to send
-	msg.mtype = msgid;
 	msg.msocket = socket;
-	
-	sprintf (msg.minfo.data, "%s", message.data);
-	sprintf (msg.minfo.id, "%s", message.id);
-	sprintf (msg.minfo.type, "%s", message.type);
+	msg.minfo = messages;
+	msg.msgQty = msgQty;
 	
 	msgqid = (socketQueue) ? socket_queue[socket] : input_queue;
 
@@ -91,29 +76,44 @@ bool check_char(const char* value) {
 	return strlen(value) == 1;
 }
 
-bool validate_message(bufferMessage message ){
+int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answerMsgs){
 
-	switch(message.type[0]){
-		case 'i':
-			slog.writeLine("validate_message | Validating Integer");
-			return check_integer(message.data);
-			break;
-		case 'd':
-			slog.writeLine("validate_message | Validating Double");
-			return check_double(message.data);
-			break;
-		case 'c':
-			slog.writeLine("validate_message | Validating Char");
-			return check_char(message.data);
-			break;
-		case 's':
-			slog.writeLine("validate_message | Validating String");
-			return true;
-			break;
-		default:
-			return false;
+	int answerMsgsQty, tempId;
+	Elemento* tempEl;
+
+	for (int i = 0; i < msgQty; i++){
+
+		if (msgs[i] -> type[0] == '2'){
+			tempId = atoi(msgs[i]-> id);
+			tempEl = elementos[tempId];
+			tempEl-> update(msgs[i]);
 		}
+		else if (msgs[i] -> type[0] == '8'){
+			if (msgs[i] -> info[0] == (char) command::DISCONNECT){
+				if (SDL_LockMutex(mutexClientState) == 0) {
+					client_state[socket] = false;
+					SDL_UnlockMutex(mutexClientState);
+				}
+			}
+		}
+		delete tempEl;
+	}
+
+	answerMsgsQty = elementos.size();
+	*answerMsgs = new struct gst*[answerMsgsQty];
+	struct gst** answerIt = (*answerMsgs);
+	map<int,Elemento*>::iterator it;
+
+	for (it = elementos.begin(); it != elementos.end(); it++){
+
+		(*answerIt) = genUpdateGstFromElemento(it -> second);
+
+	}
+
+	return answerMsgsQty;
+
 }
+
 
 static int processMessages (void *data) {
 	msg_buf msg;
@@ -124,15 +124,20 @@ static int processMessages (void *data) {
 		return 1;
 	}
 
+	struct gst** answerMsgs;
+	int msgQty;
+
 	while(!finish){
 		if (!receiveQueueMessage(input_queue, msg)) {
 			return 1;
 		}else{
-			slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
+			//slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
 			
-			long response = (validate_message(msg.minfo))? 1 : 2;
+			//long response = (validate_message(msg.minfo))? 1 : 2;
+			msgQty = _processMsgs(msg.minfo,msg.msocket, msg.msgQty, &answerMsgs);
+
 			//Writes the message in the socket's queue
-			writeQueueMessage(msg.msocket,response, msg.minfo, true);
+			writeQueueMessage(msg.msocket, answerMsgs, msgQty, true);
 		}
 	}
 
@@ -142,46 +147,50 @@ static int processMessages (void *data) {
 
 
 bool doReadingError(int n, int sock, char* buffer){
-   bufferMessage msgExit;
-   sprintf (msgExit.data, "%s", "Client Connection Closed");	
-   sprintf (msgExit.type, "%s", "N");	
-   sprintf (msgExit.id, "%s", "null");	
-   bool finish=false;
-		if (n < 0) {
-			slog.writeErrorLine("doReadingError | ERROR reading from socket");
-			writeQueueMessage(sock,99, msgExit, true);
-			finish = true;
-	   	}else if (n == 0){
-			//Exit message
-			slog.writeLine("doReadingError | Exit message received");
-			writeQueueMessage(sock,99, msgExit, true);
-			finish = true;
-	   	}else{
-			 if ((n == 1) & (string(buffer) == "q")){
-				//Exit message
-				slog.writeLine("doReading | Quit message received");
-				writeQueueMessage(sock,99, msgExit, true);
-				finish = true;
-			 }else {
-				slog.writeLine("doReading | Client send this message: " + string(buffer));				
-			}
-		}
 
-		return finish;
+	struct gst* msgExit = genAdminGst(0, command::DISCONNECT);
+	bool finish=false;
+
+	if (n < 0) {
+		slog.writeErrorLine("doReadingError | ERROR reading from socket");
+		writeQueueMessage(sock, &msgExit, 1, true);
+		finish = true;
+
+		client_state[sock] = false;
+	}
+
+	/*else if (n == 0){
+		//Exit message
+		slog.writeLine("doReadingError | Exit message received");
+		writeQueueMessage(sock, &msgExit, 1, true);
+		finish = true;
+	}else{
+		 if ((n == 1) & (string(buffer) == "q")){
+			//Exit message
+			slog.writeLine("doReading | Quit message received");
+			writeQueueMessage(sock,99, msgExit, true);
+			finish = true;
+		 }else {
+			slog.writeLine("doReading | Client send this message: " + string(buffer));
+		}
+	}*/
+
+	return finish;
 
 }
 
 //put the message into mainqueuemessages ( with lock & unlock mutex)
 bool insertingMessageQueue(int sock, char *buffer){
-	bufferMessage msg;
+	struct gst** msgs;
+	int msgQty;
 	bool finish=false;
       
 				
 	//mutex lock.
 	if (SDL_LockMutex(mutexQueue) == 0) {
 		slog.writeLine("insertingMessageQueue | Inserting message '" + string(buffer) + "' into clients queue");
-		msg = structMessage(buffer);
-		finish = !writeQueueMessage(sock,1, msg,false);
+		msgQty = decodeMessages(&msgs, buffer);
+		finish = !writeQueueMessage(sock, msgs, msgQty, false);
 	 //mutex unlock
 	 SDL_UnlockMutex(mutexQueue);
 	}
@@ -194,24 +203,31 @@ bool insertingMessageQueue(int sock, char *buffer){
 static int doReading (void *sockfd) {
    int n;
    bool finish = false;
-   char buffer[999];
+   char buffer[BUFLEN];
    
    int sock = *(int*)sockfd;
    free(sockfd);
    char messageLength[3];
    int messageSize;
-   char bufferingMessage[999];
+   char bufferingMessage[BUFLEN];
   
    //Receive a message from client
    while(!finish && !quit){
 	   //Read client's message
-		bzero(bufferingMessage,999);
-		bzero(buffer,999);
-   		n = recv(sock,buffer,998,0);
-		//handle conection Exit client,Error reading
-		finish=doReadingError(n,sock,buffer);
+		bzero(bufferingMessage,BUFLEN);
+		bzero(buffer,BUFLEN);
+   		n = recv(sock, buffer, BUFLEN-1, 0);
+		//handle Error reading
+		finish = doReadingError(n, sock, buffer);
 	        	
-		if (!finish){
+		if (finish){
+			if (SDL_LockMutex(mutexClientState) == 0) {
+				client_state[sock] = false;
+				SDL_UnlockMutex(mutexClientState);
+			}
+
+		}
+		else{
 			//getting the messageLength
 			strncpy(messageLength,buffer,3);
 			messageSize=stoi(messageLength,nullptr,10);
@@ -248,6 +264,12 @@ static int doWriting (void *sockfd) {
    msg_buf msg;
 
    int sock = *(int*)sockfd;
+
+   bool* isSocketActive;
+   if (SDL_LockMutex(mutexClientState) == 0) {
+	   isSocketActive = &client_state[sock];
+	   SDL_UnlockMutex(mutexClientState);
+   }
    free(sockfd);
 
    //Receive a message from client
@@ -258,25 +280,20 @@ static int doWriting (void *sockfd) {
 			return 1;
 		}
 
-		if (msg.mtype == 99){
+		if (!*isSocketActive){
 			//Exit message received
-			slog.writeLine("doWriting | Exit message received: " + string(msg.minfo.data));
+			//slog.writeLine("doWriting | Exit message received: " + string(msg.minfo.data));
 			socket_queue.erase(sock);
 			finish = true;
 		}else{
-			slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.data));
+			//slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.data));
 			//Respond to the client
-			const char* message;
-			if (msg.mtype == 1){
-				message = "Message is correct. I processed your message \n";
-				slog.writeLine(message);
-			}else{
-				message = "ERROR: Message is not correct. I can't process your message \n";
-				slog.writeErrorLine(message);
-			}
+			char* message;
+			int messageLen = encodeMessages(&message, msg.minfo, msg.msgQty);
+
 
 			if(!quit){
-				n = send(sock,message,strlen(message),0);
+				n = send(sock,message,messageLen,0);
 				if (n < 0) {
 					slog.writeErrorLine("doWriting | ERROR writing to socket");
 					finish = true;
@@ -364,6 +381,7 @@ static int exitManager (void *data) {
 	  slog.writeLine("Exit signal received. Closing application...");
 	  SDL_LockMutex(mutexCantClientes);
 	  SDL_LockMutex(mutexQueue);
+	  SDL_LockMutex(mutexClientState);
 	  for(auto const &it : socket_queue) {
 		  close(it.first);
 		  cant_con --;
@@ -372,6 +390,7 @@ static int exitManager (void *data) {
 
       SDL_DestroyMutex(mutexQueue);
       SDL_DestroyMutex(mutexCantClientes);
+      SDL_DestroyMutex(mutexClientState);
 	  slog.writeLine("Application closed.");
 
 	  exit(0);
@@ -405,6 +424,18 @@ void leerXML(int &cantMaxClientes, int &puerto){
 	puerto = xml.puerto;
 }
 
+
+
+Elemento* genNewPlayer(int playerId){
+	int anchoPantalla = 640 / 4;
+	int altura = 50;
+	Elemento* newPlayer = new Elemento(playerId, anchoPantalla * playerId, altura);
+	elementos[playerId] = newPlayer;
+
+	return newPlayer;
+}
+
+
 int main(int argc, char **argv)
 {
 	int sockfd, newsockfd, port_number, max_con;
@@ -412,6 +443,7 @@ int main(int argc, char **argv)
 	struct sockaddr_in cli_addr;
    	mutexQueue = SDL_CreateMutex();
 	mutexCantClientes = SDL_CreateMutex();
+	mutexClientState = SDL_CreateMutex();
 	cant_con = 0;
 
 	//Log initialize
@@ -429,6 +461,10 @@ int main(int argc, char **argv)
 	createAndDetachThread(processMessages,"processMessages", 0);
 
 	cli_len = sizeof(cli_addr);
+
+	struct gst* conMsg[2];
+	char* buffer;
+	int playerId = 1, bufferLen;
 
 	 while (1) {
 
@@ -450,15 +486,30 @@ int main(int argc, char **argv)
 			slog.writeErrorLine("ERROR on accept");
 		 }else{
 			if (cant_con == max_con){
-				send(newsockfd,"ERROR: The Server has exceeded max number of connections. \n",60,0);
+
+				conMsg[0] = genAdminGst(0, command::CON_FAIL);
+				bufferLen = encodeMessages(&buffer, conMsg, 1);
+				send(newsockfd, buffer, bufferLen ,0);
 				close(newsockfd);
+				delete buffer;
 			}else{
-				send(newsockfd,"Connected \n",12,0);
+
+				conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
+				conMsg[1] = genUpdateGstFromElemento(genNewPlayer(playerId));
+				bufferLen = encodeMessages(&buffer, conMsg, 2);
+				send(newsockfd, buffer, bufferLen, 0);
 				if (SDL_LockMutex(mutexCantClientes) == 0) {
 					cant_con++;
 					SDL_UnlockMutex(mutexCantClientes);
 				}
+				if (SDL_LockMutex(mutexClientState) == 0) {
+				   	client_state[newsockfd] = true;
+				   	SDL_UnlockMutex(mutexClientState);
+				}
 				manageNewConnection(newsockfd);
+				delete buffer;
+				playerId++;
+
 			}
 		}
 	}

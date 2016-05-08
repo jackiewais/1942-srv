@@ -1,21 +1,11 @@
-const int lengthMessage = 3;
-const int lengthType = 1;
-const int lengthId = 10;
-const int lengthData = 985;
-
-struct bufferMessage{
-	// +1 para guardar el /n de fin de string.
-	char id[lengthId+1];
-	char type[lengthType+1];
-	char data[lengthData+1];
-};
+#include "messages.h"
 
 namespace queueManager{
 
 		struct msg_buf {
-		  long mtype;
 		  int msocket;
-		  bufferMessage minfo;
+		  struct gst** minfo;
+		  int msgQty;
 		};
 
 		bool sendQueueMessage(int msgqid, msg_buf msg);
