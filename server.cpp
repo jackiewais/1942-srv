@@ -31,7 +31,7 @@ map<int,int> socket_queue;
 map<int,bool> client_state;
 map<int,Elemento*> elementos;
 Log slog;
-bool quit=false;
+bool quit=false, audit = true;
 
 
 //====================================================================================================
@@ -86,6 +86,16 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		if (msgs[i] -> type[0] == '2'){
 			tempId = atoi(msgs[i]-> id);
 			tempEl = elementos[tempId];
+
+			if (tempEl == NULL){
+				cout << "recibido elemento inexistente " << endl;
+				cout << "id = " << tempId << endl;
+			}
+			else{
+				tempEl-> update(msgs[i]);
+			
+		}
+
 			tempEl-> update(msgs[i]);
 		}
 		else if (msgs[i] -> type[0] == '8'){
@@ -96,18 +106,19 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 				}
 			}
 		}
-		delete tempEl;
+		delete msgs[i];
 	}
 
 	answerMsgsQty = elementos.size();
 	*answerMsgs = new struct gst*[answerMsgsQty];
 	struct gst** answerIt = (*answerMsgs);
-	map<int,Elemento*>::iterator it;
+	map<int,Elemento*>::iterator elementosIt;
+	elementosIt = elementos.begin();
 
-	for (it = elementos.begin(); it != elementos.end(); it++){
+	for (int i = 0; i < answerMsgsQty; i++){
 
-		(*answerIt) = genUpdateGstFromElemento(it -> second);
-
+		answerIt[i] = genUpdateGstFromElemento(elementosIt -> second);
+		elementosIt++;
 	}
 
 	return answerMsgsQty;
@@ -188,7 +199,7 @@ bool insertingMessageQueue(int sock, char *buffer){
 				
 	//mutex lock.
 	if (SDL_LockMutex(mutexQueue) == 0) {
-		slog.writeLine("insertingMessageQueue | Inserting message '" + string(buffer) + "' into clients queue");
+		//slog.writeLine("insertingMessageQueue | Inserting message '" + string(buffer) + "' into clients queue");
 		msgQty = decodeMessages(&msgs, buffer);
 		finish = !writeQueueMessage(sock, msgs, msgQty, false);
 	 //mutex unlock
@@ -217,6 +228,8 @@ static int doReading (void *sockfd) {
 		bzero(bufferingMessage,BUFLEN);
 		bzero(buffer,BUFLEN);
    		n = recv(sock, buffer, BUFLEN-1, 0);
+		if (audit)
+			cout << "AUDIT rcv: " << buffer << endl;
 		//handle Error reading
 		finish = doReadingError(n, sock, buffer);
 	        	
@@ -294,10 +307,13 @@ static int doWriting (void *sockfd) {
 
 			if(!quit){
 				n = send(sock,message,messageLen,0);
+				if (audit)
+					cout << "AUDIT snd: " << message << endl;
 				if (n < 0) {
 					slog.writeErrorLine("doWriting | ERROR writing to socket");
 					finish = true;
 				}
+				delete message;
 			}
 		}
      }
