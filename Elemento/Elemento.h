@@ -14,7 +14,13 @@ enum status:char{
 	VIVO = 'a',
 	DESTRUIDO = 'b',
 	DISPARANDO = 'c',
-	DESCONECTADO = 'd'
+	DESCONECTADO = 'd',
+	TRUCO = 'e',
+	PAUSA = 'f',
+	NO_PAUSA = 'h',
+	START = 's',
+	RESET = 'r'
+
 	};
 
 class Elemento {
@@ -29,6 +35,8 @@ public:
 //	virtual ~Elemento();
 	void update(int x, int y, status estado);
 	void update(struct gst*);
+	void updateStatus(status estado);
+	void updatePos(int x, int y);
 	int getId();
 	int getPosX();
 	int getPosY();

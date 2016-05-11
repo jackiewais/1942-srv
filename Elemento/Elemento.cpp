@@ -40,6 +40,16 @@ void Elemento::update(struct gst* msg){
 	}
 }
 
+void Elemento::updateStatus(status nuevoEstado){
+	estado = nuevoEstado;
+}
+
+void Elemento::updatePos(int x, int y){
+	posX = x;
+	posY = y;
+}
+
+
 int Elemento::getId(){
 	return id;
 }

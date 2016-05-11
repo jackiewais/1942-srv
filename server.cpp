@@ -31,7 +31,7 @@ map<int,int> socket_queue;
 map<int,bool> client_state;
 map<int,Elemento*> elementos;
 Log slog;
-bool quit=false, audit = true;
+bool quit=false, audit = false;
 
 
 //====================================================================================================
@@ -80,6 +80,8 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 
 	int answerMsgsQty, tempId;
 	Elemento* tempEl;
+	bool newEvent = false, oldEvent = false;
+	status event, prevStatus;
 
 	for (int i = 0; i < msgQty; i++){
 
@@ -90,9 +92,35 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 			if (tempEl == NULL){
 				cout << "recibido elemento inexistente " << endl;
 				cout << "id = " << tempId << endl;
-			}
-			else{
-				tempEl-> update(msgs[i]);
+			}else {
+				if ((msgs[i] -> info[0] == (char) status::START) ||
+					(msgs[i] -> info[0] == (char) status::RESET) ||
+					(msgs[i] -> info[0] == (char) status::PAUSA)){
+
+					cout << "_processMsgs DEBUG nuevoEvento = " << msgs[i] -> info[0] << endl;
+
+					newEvent = true;
+					event = (status) msgs[i] -> info[0];
+
+					prevStatus = tempEl -> getEstado();
+					tempEl-> update(msgs[i]);
+					tempEl-> updateStatus(prevStatus);
+				}
+
+				else if ((tempEl -> getEstado() == status::START) ||
+						(tempEl -> getEstado() == status::RESET) ||
+						(tempEl -> getEstado() == status::PAUSA)){
+
+					cout << "_processMsgs DEBUG viejoEvento = " << (char)tempEl -> getEstado() << endl;
+					oldEvent = true;
+					event = tempEl -> getEstado();
+					tempEl-> update(msgs[i]);
+
+				}
+				else{
+					tempEl-> update(msgs[i]);
+				}
+
 			}
 		}
 		else if (msgs[i] -> type[0] == '8'){
@@ -115,6 +143,16 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 	for (int i = 0; i < answerMsgsQty; i++){
 
 		answerIt[i] = genUpdateGstFromElemento(elementosIt -> second);
+
+		if ((newEvent || oldEvent) && (elementosIt -> first == tempId)){
+			cout << "_processMsgs DEBUG evento ori = " << answerIt[i] -> info[0] << endl;
+			answerIt[i] -> info[0] = (char) event;
+			cout << "_processMsgs DEBUG evento mod = " << answerIt[i] -> info[0] << endl;
+		}
+		else if (newEvent){
+			elementosIt -> second -> updateStatus(event);
+		}
+
 		elementosIt++;
 	}
 
@@ -213,7 +251,7 @@ static int doReading (void *sockfd) {
    bool finish = false;
    char buffer[BUFLEN];
    
-   int sock = *(int*)sockfd;
+   int sock = *(int*) sockfd;
    free(sockfd);
    char messageLength[3];
    int messageSize;
@@ -221,6 +259,8 @@ static int doReading (void *sockfd) {
   
    //Receive a message from client
    while(!finish && !quit){
+
+	   //cout << "DEBUG doReading sock = " << sock << endl;
 	   //Read client's message
 		bzero(bufferingMessage,BUFLEN);
 		bzero(buffer,BUFLEN);
@@ -254,13 +294,18 @@ static int doReading (void *sockfd) {
 				}
 				finish=insertingMessageQueue(sock,buffer);
 			 }
+			if (SDL_LockMutex(mutexClientState) == 0) {
+				finish = !client_state[sock];
+				SDL_UnlockMutex(mutexClientState);
+				//cout << "DEBUG doReading finish = " << finish << endl;
+			}
 		}
 
    	} // END WHILE
 	if (!quit){
 	if (SDL_LockMutex(mutexCantClientes) == 0) {
          cant_con--;
- 	 SDL_UnlockMutex(mutexCantClientes);	
+ 	 SDL_UnlockMutex(mutexCantClientes);
 	}
 
 	close(sock);
@@ -273,13 +318,14 @@ static int doWriting (void *sockfd) {
    bool finish = false;
    msg_buf msg;
 
-   int sock = *(int*)sockfd;
+   int sock = *(int*) sockfd;
 
    bool* isSocketActive;
    if (SDL_LockMutex(mutexClientState) == 0) {
 	   isSocketActive = &client_state[sock];
 	   SDL_UnlockMutex(mutexClientState);
    }
+   //cout << "DEBUG doWriting sock = " << sock << endl;
    free(sockfd);
 
    //Receive a message from client
@@ -510,6 +556,8 @@ int main(int argc, char **argv)
 				conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
 				conMsg[1] = genUpdateGstFromElemento(genNewPlayer(playerId));
 				bufferLen = encodeMessages(&buffer, conMsg, 2);
+				if (audit)
+					cout << "AUDIT snd: " << buffer << endl;
 				send(newsockfd, buffer, bufferLen, 0);
 				if (SDL_LockMutex(mutexCantClientes) == 0) {
 					cant_con++;
