@@ -167,12 +167,12 @@ bool doReadingError(int n, int sock, char* buffer){
 		client_state[sock] = false;
 	}
 
-	/*else if (n == 0){
+	else if (n == 0){
 		//Exit message
 		slog.writeLine("doReadingError | Exit message received");
 		writeQueueMessage(sock, &msgExit, 1, true);
 		finish = true;
-	}else{
+	}/*else{
 		 if ((n == 1) & (string(buffer) == "q")){
 			//Exit message
 			slog.writeLine("doReading | Quit message received");
