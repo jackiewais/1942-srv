@@ -93,10 +93,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 			}
 			else{
 				tempEl-> update(msgs[i]);
-			
-		}
-
-			tempEl-> update(msgs[i]);
+			}
 		}
 		else if (msgs[i] -> type[0] == '8'){
 			if (msgs[i] -> info[0] == (char) command::DISCONNECT){
