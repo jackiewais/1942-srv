@@ -18,6 +18,15 @@ void intToFixedChar(int n, char* p, int length){
 
 }	
 
+void cleanGst(struct gst* msg){
+	memset(msg->type,0,typel +1);
+	memset(msg->id,0,idl +1);
+	memset(msg->posx,0,posl +1);
+	memset(msg->posy,0,posl +1);
+	memset(msg->info,0,infol +1);
+
+}
+
 int decodeMessages(struct gst*** msgs, char* msgsChar){
 
 	int nOfMsgs;
@@ -36,6 +45,7 @@ int decodeMessages(struct gst*** msgs, char* msgsChar){
 	for (int i = 0; i < nOfMsgs; i++){
 
 		*msgIdx = new struct gst;
+		cleanGst(*msgIdx);
 
 		memcpy((*msgIdx) -> type, charIdx, typel);
 		charIdx += typel;
@@ -114,6 +124,7 @@ int encodeMessages(char** msgsChar, struct gst** msgs, int qty){
 struct gst* genUpdateGstFromElemento(Elemento* elemento){
 
 	struct gst* newMsg = new struct gst;
+	cleanGst(newMsg);
 
 	newMsg -> type[0] = (char) msgType::UPDATE;
 
@@ -134,6 +145,7 @@ struct gst* genUpdateGstFromElemento(Elemento* elemento){
 struct gst* genAdminGst(int clientId, command comando){
 
 	struct gst* newMsg = new struct gst;
+	cleanGst(newMsg);
 
 	newMsg -> type[0] = (char) msgType::CONTROL;
 
