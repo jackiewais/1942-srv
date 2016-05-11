@@ -15,7 +15,7 @@ namespace queueManager{
 bool sendQueueMessage(int msgqid, msg_buf msg){
 	int rc;
 
-	rc = msgsnd(msgqid, &msg, sizeof(msg.minfo), 0);
+	rc = msgsnd(msgqid, &msg, sizeof(msg_buf), 0);
 	if (rc < 0) {
 		perror(strerror(errno));
 		printf("sendQueueMessage | ERROR: failed sending message.\n");
@@ -39,7 +39,7 @@ bool getQueue(int &queue){
 bool receiveQueueMessage(int queue, msg_buf &msg){
 	int rc;
 
-	rc = msgrcv(queue, &msg, sizeof(msg.minfo), 0, 0);
+	rc = msgrcv(queue, &msg, sizeof(msg_buf), 0, 0);
 	if (rc < 0) {
 		perror( strerror(errno) );
 		printf("receiveQueueMessage | ERROR: failed to receive message \n");

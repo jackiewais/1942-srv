@@ -55,9 +55,9 @@ const int lengthl = 3,
 struct gst {
 
 	char type[typel +1];
-	char id[idl];
-	char posx[posl];
-	char posy[posl];
+	char id[idl+1];
+	char posx[posl+1];
+	char posy[posl+1];
 	char info[infol +1];
 
 };
