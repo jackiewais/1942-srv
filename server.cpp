@@ -32,6 +32,11 @@ map<int,bool> client_state;
 map<int,Elemento*> elementos;
 Log slog;
 bool quit=false, audit = false;
+type_Ventana ventana;
+list<type_Sprite> sprites;
+type_Escenario escenario;
+type_Avion jugador;
+string pathXMLEscenario = "escenario.xml";
 
 
 //====================================================================================================
@@ -76,11 +81,26 @@ bool check_char(const char* value) {
 	return strlen(value) == 1;
 }
 
+void buscarPathSprite(Parser::spriteType idSprite, char path[pathl]) {
+	list<type_Sprite>::iterator it;
+	bool encontrado = false;
+
+	for (it = sprites.begin(); it != sprites.end(); it ++) {
+		if ((it)->id == idSprite) {
+			encontrado = true;
+			memset(path, '\0', pathl);
+			memcpy(path, (it)->path, pathl);
+		}
+	}
+	if (!encontrado)
+		memcpy(path, "-", pathl);
+}
+
 int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answerMsgs){
 
 	int answerMsgsQty, tempId;
 	Elemento* tempEl;
-	bool newEvent = false, oldEvent = false;
+	bool newEvent = false, oldEvent = false, isEscenario = false;
 	status event, prevStatus;
 
 	for (int i = 0; i < msgQty; i++){
@@ -130,30 +150,51 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 					SDL_UnlockMutex(mutexClientState);
 				}
 			}
+			if (msgs[i] -> info[0] == (char) command::REQ_SCENARIO) {
+				isEscenario = true;
+			}
 		}
 		delete msgs[i];
 	}
+	if (isEscenario) {
+		char pathFondo[pathl], pathElemento[pathl];
+		memset(pathFondo, '=', pathl);
+		memset(pathElemento, '=', pathl);
+		int i = 2;
+		buscarPathSprite(escenario.fondo.spriteId, pathFondo);
 
-	answerMsgsQty = elementos.size();
-	*answerMsgs = new struct gst*[answerMsgsQty];
-	struct gst** answerIt = (*answerMsgs);
-	map<int,Elemento*>::iterator elementosIt;
-	elementosIt = elementos.begin();
-
-	for (int i = 0; i < answerMsgsQty; i++){
-
-		answerIt[i] = genUpdateGstFromElemento(elementosIt -> second);
-
-		if ((newEvent || oldEvent) && (elementosIt -> first == tempId)){
-			cout << "_processMsgs DEBUG evento ori = " << answerIt[i] -> info[0] << endl;
-			answerIt[i] -> info[0] = (char) event;
-			cout << "_processMsgs DEBUG evento mod = " << answerIt[i] -> info[0] << endl;
+		answerMsgsQty = escenario.elementos.size() + 2;
+		*answerMsgs = new struct gst*[answerMsgsQty];
+		struct gst** answerIt = (*answerMsgs);
+		answerIt[0] = genGstFromFondo(&escenario, pathFondo);
+		answerIt[1] = genGstFromVentana(&ventana);
+		list<type_Elemento>::iterator ite;
+		for (ite = escenario.elementos.begin(); ite != escenario.elementos.end(); ite ++) {
+			buscarPathSprite((ite) -> spriteId, pathElemento);
+			answerIt[i] = genGstFromElemento(&(*ite), pathElemento);
+			i++;
 		}
-		else if (newEvent){
-			elementosIt -> second -> updateStatus(event);
+	} else {
+		answerMsgsQty = escenario.elementos.size();
+		*answerMsgs = new struct gst*[answerMsgsQty];
+		struct gst** answerIt = (*answerMsgs);
+		map<int,Elemento*>::iterator elementosIt;
+		elementosIt = elementos.begin();
+		for (int i = 0; i < answerMsgsQty; i++){
+	
+			answerIt[i] = genUpdateGstFromElemento(elementosIt -> second);
+	
+			if ((newEvent || oldEvent) && (elementosIt -> first == tempId)){
+				cout << "_processMsgs DEBUG evento ori = " << answerIt[i] -> info[0] << endl;
+				answerIt[i] -> info[0] = (char) event;
+				cout << "_processMsgs DEBUG evento mod = " << answerIt[i] -> info[0] << endl;
+			}
+			else if (newEvent){
+				elementosIt -> second -> updateStatus(event);
+			}
+		
+			elementosIt++;
 		}
-
-		elementosIt++;
 	}
 
 	return answerMsgsQty;
@@ -178,7 +219,6 @@ static int processMessages (void *data) {
 			return 1;
 		}else{
 			//slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
-			
 			//long response = (validate_message(msg.minfo))? 1 : 2;
 			msgQty = _processMsgs(msg.minfo,msg.msocket, msg.msgQty, &answerMsgs);
 
@@ -246,7 +286,7 @@ bool insertingMessageQueue(int sock, char *buffer){
 
 
 
-static int doReading (void *sockfd) {
+/*static int doReading (void *sockfd) {
    int n;
    bool finish = false;
    char buffer[BUFLEN];
@@ -311,6 +351,84 @@ static int doReading (void *sockfd) {
 	close(sock);
 }
 	return 0;
+}*/
+
+static int doReading (void *sockfd) {
+   int n;
+   bool finish = false;
+   char buffer[BUFLEN];
+
+   int sock = *(int*) sockfd;
+   free(sockfd);
+   char messageLength[3];
+   int messageSize;
+   char bufferingMessage[BUFLEN];
+
+   //Receive a message from client
+   while(!finish && !quit){
+
+       //cout << "DEBUG doReading sock = " << sock << endl;
+       //Read client's message
+        bzero(bufferingMessage,BUFLEN);
+        bzero(buffer,BUFLEN);
+           n = recv(sock, buffer, BUFLEN-1, 0);
+           cout << "DEBUG DOREADING n = " << n << endl;
+        if (audit)
+            cout << "AUDIT rcv: " << buffer << endl;
+        //handle Error reading
+        finish = doReadingError(n, sock, buffer);
+
+        if (finish){
+            if (SDL_LockMutex(mutexClientState) == 0) {
+                client_state[sock] = false;
+                SDL_UnlockMutex(mutexClientState);
+            }
+
+        }
+        else{
+            //getting the messageLength
+            strncpy(messageLength,buffer,3);
+            char* bufferIt = buffer;
+            while (!(messageLength[0] >= '0' && messageLength[0] <= '9') &&
+                   !(messageLength[1] >= '0' && messageLength[1] <= '9') &&
+                   !(messageLength[2] >= '0' && messageLength[2] <= '9') ){
+                bufferIt++;
+                n--;
+                strncpy(messageLength,bufferIt,3);
+                cout << "DEBUG DOREADING buffer = " << bufferIt << endl;
+            }
+
+            messageSize=atoi(messageLength);
+
+            if (n>=messageSize){//full message received.
+                finish=insertingMessageQueue(sock,bufferIt);
+            }else{//message incomplete.
+                int readed=n;
+                cout << messageSize << endl;
+                while ( readed !=messageSize){
+                    n =recv(sock,bufferIt+readed,messageSize-readed,0);
+                    cout << "loopeando dentro del doreading" << endl;
+                    readed+=n;
+                }
+                finish=insertingMessageQueue(sock,bufferIt);
+             }
+            if (SDL_LockMutex(mutexClientState) == 0) {
+                finish = !client_state[sock];
+                SDL_UnlockMutex(mutexClientState);
+                //cout << "DEBUG doReading finish = " << finish << endl;
+            }
+        }
+
+       } // END WHILE
+    if (!quit){
+    if (SDL_LockMutex(mutexCantClientes) == 0) {
+         cant_con--;
+      SDL_UnlockMutex(mutexCantClientes);
+    }
+
+    close(sock);
+}
+    return 0;
 }
 
 static int doWriting (void *sockfd) {
@@ -456,6 +574,17 @@ static int exitManager (void *data) {
 	  return 0;
 }
 
+void leerXMLEscenario() {
+	type_DatosGraficos xml;
+
+	xml = parseXMLServerMap(pathXMLEscenario.c_str(), &slog);
+
+	ventana = xml.ventana;
+	sprites = xml.sprites;
+	escenario = xml.escenario;
+	jugador = xml.avion;
+}
+
 void leerXML(int &cantMaxClientes, int &puerto){
 
 	type_datosServer xml;
@@ -513,6 +642,9 @@ int main(int argc, char **argv)
 	leerXML(max_con,port_number);
 	slog.writeLine("Port: " + to_string(port_number));
 	slog.writeLine("Max connections: " + to_string(max_con));
+
+	slog.writeLine("Leyendo XML de configuracion del juego...");
+	leerXMLEscenario();
 
 	createAndDetachThread(exitManager,"exitManager", 0);
 	sockfd = openAndBindSocket(port_number);

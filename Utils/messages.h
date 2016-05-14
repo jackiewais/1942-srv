@@ -1,6 +1,8 @@
 #ifndef MESSAGES_H
 #define MESSAGES_H
 
+#include "../Parser/Parser.h"
+
 class Elemento;
 
 /* estructura paquete
@@ -14,7 +16,9 @@ const int lengthl = 3,
 	typel = 1,
 	idl = 2,
 	posl = 4,
-	infol = 1;
+	infol = 1,
+	pathl = 60,
+	idObjl = 9;
 
 /* game standard message
  *
@@ -55,10 +59,13 @@ const int lengthl = 3,
 struct gst {
 
 	char type[typel +1];
-	char id[idl+1];
-	char posx[posl+1];
-	char posy[posl+1];
+	char id[idl];
+	char ancho[posl];
+	char alto[posl];
+	char posx[posl];
+	char posy[posl];
 	char info[infol +1];
+	char path[pathl];
 
 };
 
@@ -66,7 +73,8 @@ enum msgType:char{
 
 	UPDATE = '2',
 	REMOVE = '3',
-	CONTROL = '8'
+	CONTROL = '8',
+	OBJETO = '0'
 
 };
 
@@ -87,6 +95,14 @@ int encodeMessages(char** msgsChar, struct gst** msgs, int qty);
 struct gst* genUpdateGstFromElemento(Elemento*);
 
 struct gst* genAdminGst(int clientId, command comando);
+
+struct gst* genGstFromCant(int cant);
+
+struct gst* genGstFromFondo(Parser::type_Escenario * escenario, char path[pathl]);
+
+struct gst* genGstFromElemento(Parser::type_Elemento * elem, char path[pathl]);
+
+struct gst* genGstFromVentana(Parser::type_Ventana* ventana);
 
 
 #endif

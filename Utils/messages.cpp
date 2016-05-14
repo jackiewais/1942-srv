@@ -7,7 +7,8 @@
 int msg1len = typel + idl + posl + posl,
 	msg2len = typel + idl + posl + posl + infol,
 	msg3len = typel + idl,
-	msg8len = typel + idl + infol;
+	msg8len = typel + idl + infol,
+	msg0lin = typel + idl + posl + posl + posl + posl + pathl;
 
 void intToFixedChar(int n, char* p, int length){
 	
@@ -16,7 +17,7 @@ void intToFixedChar(int n, char* p, int length){
 		n = n/10;
 	}
 
-}	
+}
 
 void cleanGst(struct gst* msg){
 	memset(msg->type,0,typel +1);
@@ -28,7 +29,6 @@ void cleanGst(struct gst* msg){
 }
 
 int decodeMessages(struct gst*** msgs, char* msgsChar){
-
 	int nOfMsgs;
 
 	char nOfMsgsChar[nOfMsgsl],
@@ -38,7 +38,6 @@ int decodeMessages(struct gst*** msgs, char* msgsChar){
 	memcpy(nOfMsgsChar, charIdx, nOfMsgsl);
 	nOfMsgs = atoi(nOfMsgsChar);
 	charIdx += nOfMsgsl;
-
 	*msgs = new struct gst*[nOfMsgs];
 	struct gst** msgIdx = *msgs;
 
@@ -58,13 +57,21 @@ int decodeMessages(struct gst*** msgs, char* msgsChar){
 			charIdx += posl;
 			memcpy((*msgIdx) -> posy, charIdx, posl);
 			charIdx += posl;
-		}
-
-		if ((*msgIdx) -> type[0] == '2' || (*msgIdx) -> type[0] == '8'){
+		} else if ((*msgIdx) -> type[0] == '2' || (*msgIdx) -> type[0] == '8'){
 			memcpy((*msgIdx) -> info, charIdx, infol);
 			charIdx += infol;
-		}
-		else if ((*msgIdx) -> type[0] != '3')
+		} else if ((*msgIdx) -> type[0] == '0'){
+			memcpy((*msgIdx) -> ancho, charIdx, posl);
+			charIdx += posl;
+			memcpy((*msgIdx) -> alto, charIdx, posl);
+			charIdx += posl;
+			memcpy((*msgIdx) -> posx, charIdx, posl);
+			charIdx += posl;
+			memcpy((*msgIdx) -> posy, charIdx, posl);
+			charIdx += posl;
+			memcpy((*msgIdx) -> path, charIdx, pathl);
+			charIdx += pathl;
+		} else if ((*msgIdx) -> type[0] != '3')
 			return -1;
 
 		msgIdx++;
@@ -112,6 +119,25 @@ int encodeMessages(char** msgsChar, struct gst** msgs, int qty){
 			pkglen += infol;
 		}
 
+		if ((*msgs) -> type[0] == '0'){
+			memcpy(bufferIt, (*msgs) -> ancho, posl);
+			bufferIt += posl;
+
+			memcpy(bufferIt, (*msgs) -> alto, posl);
+			bufferIt += posl;
+
+			memcpy(bufferIt, (*msgs) -> posx, posl);
+			bufferIt += posl;
+
+			memcpy(bufferIt, (*msgs) -> posy, posl);
+			bufferIt += posl;
+
+			memcpy(bufferIt, (*msgs) -> path, pathl);
+			bufferIt += pathl;
+
+			pkglen += posl + posl + posl + posl + pathl;
+		}
+
 		msgs++;
 		
 	}
@@ -119,6 +145,83 @@ int encodeMessages(char** msgsChar, struct gst** msgs, int qty){
 
 	intToFixedChar(pkglen, buffer, lengthl);
 	return pkglen;
+}
+
+struct gst* genGstFromFondo(Parser::type_Escenario * escenario, char path[pathl]) {
+	struct gst* newMsg = new struct gst;
+
+	newMsg -> type[0] = (char) msgType::OBJETO;
+
+	char charMedida[posl];
+	memcpy(newMsg -> id, "FO", idl);
+
+	intToFixedChar(escenario->ancho, charMedida, posl);
+	memcpy(newMsg -> ancho, charMedida, posl);
+
+	intToFixedChar(escenario->alto, charMedida, posl);
+	memcpy(newMsg -> alto, charMedida, posl);
+
+	intToFixedChar(0, charMedida, posl);
+	memcpy(newMsg -> posx, charMedida, posl);
+
+	intToFixedChar(0, charMedida, posl);
+	memcpy(newMsg -> posy, charMedida, posl);
+
+	memset(newMsg -> path, '=', pathl);
+	memcpy(newMsg -> path, path, pathl);
+
+	return newMsg;
+}
+
+struct gst* genGstFromElemento(Parser::type_Elemento * elem, char path[pathl]) {
+	struct gst* newMsg = new struct gst;
+
+	newMsg -> type[0] = (char) msgType::OBJETO;
+
+	char charMedida[posl];
+	memcpy(newMsg -> id, "EL", idl);
+
+	intToFixedChar(0, charMedida, posl);
+	memcpy(newMsg -> ancho, charMedida, posl);
+
+	intToFixedChar(0, charMedida, posl);
+	memcpy(newMsg -> alto, charMedida, posl);
+
+	intToFixedChar(elem->posicionX, charMedida, posl);
+	memcpy(newMsg -> posx, charMedida, posl);
+
+	intToFixedChar(elem->posicionY, charMedida, posl);
+	memcpy(newMsg -> posy, charMedida, posl);
+
+	memset(newMsg -> path, '=', pathl);
+	memcpy(newMsg -> path, path, pathl);
+
+	return newMsg;
+}
+
+struct gst* genGstFromVentana(Parser::type_Ventana* ventana){
+	struct gst* newMsg = new struct gst;
+
+	newMsg -> type[0] = (char) msgType::OBJETO;
+
+	char charMedida[posl];
+	memcpy(newMsg -> id, "VE", idl);
+
+	intToFixedChar(ventana->ancho, charMedida, posl);
+	memcpy(newMsg -> ancho, charMedida, posl);
+
+	intToFixedChar(ventana->alto, charMedida, posl);
+	memcpy(newMsg -> alto, charMedida, posl);
+
+	intToFixedChar(0, charMedida, posl);
+	memcpy(newMsg -> posx, charMedida, posl);
+
+	intToFixedChar(0, charMedida, posl);
+	memcpy(newMsg -> posy, charMedida, posl);
+
+	memset(newMsg -> path, '=', pathl);
+
+	return newMsg;
 }
 
 struct gst* genUpdateGstFromElemento(Elemento* elemento){

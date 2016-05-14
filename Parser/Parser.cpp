@@ -285,18 +285,22 @@ class myexception: public exception
   virtual const char* what() const throw() { return "METODO EN DESARROLLO!"; }
 } NotImplementedException;
 
-// Los tipos de Sprites son los siguientes: AVION, DISPARO, AGUA, ISLA, VUELTA, BLANCO
+// Los tipos de Sprites son los siguientes: DISPARO, VUELTA, PELOTA, ENFERMERA, JUGADOR, BLANCO, FONDO
 spriteType formatTipoSprite(char * tipo) {
-	if (strcmp(tipo,"AVION")==0)
-		return AVION;
+	if (strcmp(tipo,"PELOTA")==0)
+		return PELOTA;
 	if (strcmp(tipo,"DISPARO")==0)
 		return DISPARO;
-	if (strcmp(tipo,"AGUA")==0)
-		return AGUA;
-	if (strcmp(tipo,"ISLA")==0)
-		return ISLA;
 	if (strcmp(tipo,"VUELTA")==0)
 		return VUELTA;
+	if (strcmp(tipo, "JUGADOR")==0)
+		return JUGADOR;
+	if (strcmp(tipo, "JUGADOR")==0)
+		return JUGADOR;
+	if (strcmp(tipo, "ENFERMERA")==0)
+		return ENFERMERA;
+	if (strcmp(tipo, "FONDO")==0)
+		return FONDO;
 	return BLANCO;
 }
 

@@ -5,6 +5,9 @@
  *      Author: bigfatpancha
  */
 
+#ifndef PARSER_H_
+#define PARSER_H_
+
 #include <map>
 #include <iostream>
 #include <string>
@@ -47,7 +50,7 @@ namespace Parser {
 	// DATOS RELACIONADOS CON LA SEGUNDA ENTREGA.
 	// ================================================================================
 
-	enum spriteType {AVION, DISPARO, AGUA, ISLA, VUELTA, BLANCO};
+	enum spriteType {DISPARO, VUELTA, PELOTA, ENFERMERA, JUGADOR, FONDO, BLANCO};
 
 	struct type_Ventana{
 		int ancho;
@@ -123,4 +126,4 @@ namespace Parser {
 	// ================================================================================
 };
 
-
+#endif /* PARSER_H_ */

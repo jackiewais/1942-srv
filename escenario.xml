@@ -1,43 +1,92 @@
 <servidor>
 	<log>1</log>
 	<ventana>
-		<ancho>800</ancho>
-		<alto>600</alto>
+		<ancho>500</ancho>
+		<alto>500</alto>
 	</ventana>	
 	<sprites>
 		<sprite>
-			<id>avion</id>
-			<path>Images/vacio.png</path>
+			<id>PELOTA</id>
+			<path>/home/lucia/git/game-1986/sprites/pelota.png</path>
 			<cantidad>1</cantidad>
 			<ancho>10</ancho>
 			<alto>10</alto>
 		</sprite>
 		<sprite>
-			<id>disparo</id>
-			<path>Images/vacio.png</path>
+			<id>JUGADOR</id>
+			<path>sprites/spriteJugador1.png</path>
+			<cantidad>1</cantidad>
+			<ancho>10</ancho>
+			<alto>10</alto>
+		</sprite>
+		<sprite>
+			<id>DISPARO</id>
+			<path>/home/lucia/git/game-1986/sprites/jugadorPateando.png</path>
+			<cantidad>1</cantidad>
+			<ancho>10</ancho>
+			<alto>10</alto>
+		</sprite>
+		<sprite>
+			<id>VUELTA</id>
+			<path>/home/lucia/git/game-1986/sprites/truco.png</path>
+			<cantidad>1</cantidad>
+			<ancho>10</ancho>
+			<alto>10</alto>
+		</sprite>
+		<sprite>
+			<id>ENFERMERA</id>
+			<path>/home/lucia/git/game-1986/enfermera</path>
+			<cantidad>1</cantidad>
+			<ancho>5</ancho>
+			<alto>5</alto>
+		</sprite>
+		<sprite>
+			<id>FONDO</id>
+			<path>/home/lucia/git/game-1986/background.bmp</path>
 			<cantidad>1</cantidad>
 			<ancho>5</ancho>
 			<alto>5</alto>
 		</sprite>
 	</sprites>	
 	<escenario>
-		<ancho>100</ancho>
-		<alto>1000</alto>
+		<ancho>500</ancho>
+		<alto>2000</alto>
 		<fondo>
-			<spriteId>agua</spriteId>
+			<spriteId>fondo</spriteId>
 			<ancho>25</ancho>
 			<alto>25</alto>
 		</fondo>
 		<elementos>
 			<elemento>
-				<spriteId>isla</spriteId>
+				<spriteId>PELOTA</spriteId>
 				<posicion>
-					<x>10</x>
-					<y>15</y>
+					<x>200</x>
+					<y>500</y>
 				</posicion>
 			</elemento>
 			<elemento>
-				<spriteId>isla</spriteId>
+				<spriteId>PELOTA</spriteId>
+				<posicion>
+					<x>200</x>
+					<y>2000</y>
+				</posicion>
+			</elemento>
+			<elemento>
+				<spriteId>PELOTA</spriteId>
+				<posicion>
+					<x>150</x>
+					<y>700</y>
+				</posicion>
+			</elemento>
+			<elemento>
+				<spriteId>PELOTA</spriteId>
+				<posicion>
+					<x>100</x>
+					<y>100</y>
+				</posicion>
+			</elemento>
+			<elemento>
+				<spriteId>ENFERMERA</spriteId>
 				<posicion>
 					<x>15</x>
 					<y>20</y>
@@ -48,8 +97,8 @@
 	<avion>
 		<velDesplazamiento>10</velDesplazamiento>
 		<velocidadDisparos>6</velocidadDisparos>
-		<avionSpriteId>avion</avionSpriteId>
-		<vueltaSpriteId>vuelta</vueltaSpriteId>
-		<disparosSpriteId>disparo</disparosSpriteId>
+		<avionSpriteId>JUGADOR</avionSpriteId>
+		<vueltaSpriteId>VUELTA</vueltaSpriteId>
+		<disparosSpriteId>DISPARO</disparosSpriteId>
 	</avion>
 </servidor>
