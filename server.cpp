@@ -110,7 +110,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		if (msgs[i] -> type[0] == '2'){
 			tempId = atoi(msgs[i]-> id);
 			tempEl = elementos[tempId];
-			//cout << "DEBUG _processMsgs esta queriendo actualizar" << endl;
+			cout << "DEBUG _processMsgs esta queriendo actualizar" << endl;
 			if (tempEl == NULL){
 				cout << "recibido elemento inexistente " << endl;
 				cout << "id = " << tempId << endl;
@@ -119,7 +119,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 					(msgs[i] -> info[0] == (char) status::RESET) ||
 					(msgs[i] -> info[0] == (char) status::PAUSA)){
 
-					//cout << "_processMsgs DEBUG nuevoEvento = " << msgs[i] -> info[0] << endl;
+					cout << "_processMsgs DEBUG nuevoEvento = " << msgs[i] -> info[0] << endl;
 
 					newEvent = true;
 					event = (status) msgs[i] -> info[0];
@@ -133,16 +133,17 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 						(tempEl -> getEstado() == status::RESET) ||
 						(tempEl -> getEstado() == status::PAUSA)){
 
-					//cout << "_processMsgs DEBUG viejoEvento = " << (char)tempEl -> getEstado() << endl;
+					cout << "_processMsgs DEBUG viejoEvento = " << (char)tempEl -> getEstado() << endl;
 					oldEvent = true;
 					event = tempEl -> getEstado();
 					tempEl-> update(msgs[i]);
 
 				}
 				else{
+					cout << "_processMsgs DEBUG info = " << msgs[i] -> info[0] << endl;
 					tempEl-> update(msgs[i]);
 				}
-				//cout << "DEBUG _processMsgs actualizo el elemento" << endl;
+				cout << "DEBUG _processMsgs actualizo el elemento" << endl;
 
 			}
 		}
@@ -188,9 +189,9 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 			answerIt[i] = genUpdateGstFromElemento(elementosIt -> second);
 	
 			if ((newEvent || oldEvent) && (elementosIt -> first == tempId)){
-				//cout << "_processMsgs DEBUG evento ori = " << answerIt[i] -> info[0] << endl;
+				cout << "_processMsgs DEBUG evento ori = " << answerIt[i] -> info[0] << endl;
 				answerIt[i] -> info[0] = (char) event;
-				//cout << "_processMsgs DEBUG evento mod = " << answerIt[i] -> info[0] << endl;
+				cout << "_processMsgs DEBUG evento mod = " << answerIt[i] -> info[0] << endl;
 			}
 			else if (newEvent){
 				elementosIt -> second -> updateStatus(event);

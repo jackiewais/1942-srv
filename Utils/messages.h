@@ -59,13 +59,13 @@ const int lengthl = 3,
 struct gst {
 
 	char type[typel +1];
-	char id[idl];
-	char ancho[posl];
-	char alto[posl];
-	char posx[posl];
-	char posy[posl];
+	char id[idl+1];
+	char ancho[posl+1];
+	char alto[posl+1];
+	char posx[posl+1];
+	char posy[posl+1];
 	char info[infol +1];
-	char path[pathl];
+	char path[pathl+1];
 
 };
 

@@ -22,9 +22,12 @@ void intToFixedChar(int n, char* p, int length){
 void cleanGst(struct gst* msg){
 	memset(msg->type,0,typel +1);
 	memset(msg->id,0,idl +1);
+	memset(msg->ancho,0,posl +1);
+	memset(msg->alto,0,posl +1);
 	memset(msg->posx,0,posl +1);
 	memset(msg->posy,0,posl +1);
 	memset(msg->info,0,infol +1);
+	memset(msg->path,0,pathl +1);
 
 }
 
@@ -57,10 +60,14 @@ int decodeMessages(struct gst*** msgs, char* msgsChar){
 			charIdx += posl;
 			memcpy((*msgIdx) -> posy, charIdx, posl);
 			charIdx += posl;
-		} else if ((*msgIdx) -> type[0] == '2' || (*msgIdx) -> type[0] == '8'){
+		}
+
+		if ((*msgIdx) -> type[0] == '2' || (*msgIdx) -> type[0] == '8'){
 			memcpy((*msgIdx) -> info, charIdx, infol);
 			charIdx += infol;
-		} else if ((*msgIdx) -> type[0] == '0'){
+		}
+
+		else if ((*msgIdx) -> type[0] == '0'){
 			memcpy((*msgIdx) -> ancho, charIdx, posl);
 			charIdx += posl;
 			memcpy((*msgIdx) -> alto, charIdx, posl);
