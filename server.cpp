@@ -31,7 +31,7 @@ map<int,int> socket_queue;
 map<int,bool> client_state;
 map<int,Elemento*> elementos;
 Log slog;
-bool quit=false, audit = false;
+bool quit=false, audit = true;
 type_Ventana ventana;
 list<type_Sprite> sprites;
 type_Escenario escenario;
@@ -98,6 +98,8 @@ void buscarPathSprite(Parser::spriteType idSprite, char path[pathl]) {
 
 int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answerMsgs){
 
+	//cout << "DEBUG entro a _processMsgs" << endl;
+
 	int answerMsgsQty, tempId;
 	Elemento* tempEl;
 	bool newEvent = false, oldEvent = false, isEscenario = false;
@@ -108,7 +110,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		if (msgs[i] -> type[0] == '2'){
 			tempId = atoi(msgs[i]-> id);
 			tempEl = elementos[tempId];
-
+			//cout << "DEBUG _processMsgs esta queriendo actualizar" << endl;
 			if (tempEl == NULL){
 				cout << "recibido elemento inexistente " << endl;
 				cout << "id = " << tempId << endl;
@@ -117,7 +119,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 					(msgs[i] -> info[0] == (char) status::RESET) ||
 					(msgs[i] -> info[0] == (char) status::PAUSA)){
 
-					cout << "_processMsgs DEBUG nuevoEvento = " << msgs[i] -> info[0] << endl;
+					//cout << "_processMsgs DEBUG nuevoEvento = " << msgs[i] -> info[0] << endl;
 
 					newEvent = true;
 					event = (status) msgs[i] -> info[0];
@@ -131,7 +133,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 						(tempEl -> getEstado() == status::RESET) ||
 						(tempEl -> getEstado() == status::PAUSA)){
 
-					cout << "_processMsgs DEBUG viejoEvento = " << (char)tempEl -> getEstado() << endl;
+					//cout << "_processMsgs DEBUG viejoEvento = " << (char)tempEl -> getEstado() << endl;
 					oldEvent = true;
 					event = tempEl -> getEstado();
 					tempEl-> update(msgs[i]);
@@ -140,6 +142,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 				else{
 					tempEl-> update(msgs[i]);
 				}
+				//cout << "DEBUG _processMsgs actualizo el elemento" << endl;
 
 			}
 		}
@@ -175,7 +178,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 			i++;
 		}
 	} else {
-		answerMsgsQty = escenario.elementos.size();
+		answerMsgsQty = elementos.size();
 		*answerMsgs = new struct gst*[answerMsgsQty];
 		struct gst** answerIt = (*answerMsgs);
 		map<int,Elemento*>::iterator elementosIt;
@@ -185,9 +188,9 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 			answerIt[i] = genUpdateGstFromElemento(elementosIt -> second);
 	
 			if ((newEvent || oldEvent) && (elementosIt -> first == tempId)){
-				cout << "_processMsgs DEBUG evento ori = " << answerIt[i] -> info[0] << endl;
+				//cout << "_processMsgs DEBUG evento ori = " << answerIt[i] -> info[0] << endl;
 				answerIt[i] -> info[0] = (char) event;
-				cout << "_processMsgs DEBUG evento mod = " << answerIt[i] -> info[0] << endl;
+				//cout << "_processMsgs DEBUG evento mod = " << answerIt[i] -> info[0] << endl;
 			}
 			else if (newEvent){
 				elementosIt -> second -> updateStatus(event);
@@ -224,6 +227,7 @@ static int processMessages (void *data) {
 
 			//Writes the message in the socket's queue
 			writeQueueMessage(msg.msocket, answerMsgs, msgQty, true);
+			//cout << "DEBUG processMessages se escribio en la queue de escritura" << endl;
 		}
 	}
 
@@ -372,7 +376,7 @@ static int doReading (void *sockfd) {
         bzero(bufferingMessage,BUFLEN);
         bzero(buffer,BUFLEN);
            n = recv(sock, buffer, BUFLEN-1, 0);
-           cout << "DEBUG DOREADING n = " << n << endl;
+           //cout << "DEBUG DOREADING n = " << n << endl;
         if (audit)
             cout << "AUDIT rcv: " << buffer << endl;
         //handle Error reading
@@ -395,7 +399,7 @@ static int doReading (void *sockfd) {
                 bufferIt++;
                 n--;
                 strncpy(messageLength,bufferIt,3);
-                cout << "DEBUG DOREADING buffer = " << bufferIt << endl;
+                //cout << "DEBUG DOREADING buffer = " << bufferIt << endl;
             }
 
             messageSize=atoi(messageLength);
@@ -463,8 +467,9 @@ static int doWriting (void *sockfd) {
 			//slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.data));
 			//Respond to the client
 			char* message;
+			//cout << "DEBUG doWriting esta queriendo encodear los mensajes" << endl;
 			int messageLen = encodeMessages(&message, msg.minfo, msg.msgQty);
-
+			//cout << "DEBUG doWriting encodeo los mensajes" << endl;
 
 			if(!quit){
 				n = send(sock,message,messageLen,0);
@@ -500,6 +505,7 @@ void createAndDetachThread(SDL_ThreadFunction fn, const char *name, int data){
 void manageNewConnection(int newsockfd){
 
 	int msgqid;
+	usleep(1000*1000);
 
 	//Create the output messages queue for the socket
 	if (getQueue(msgqid)) {
