@@ -96,6 +96,7 @@ int encodeMessages(char** msgsChar, struct gst** msgs, int qty){
 
 	*msgsChar = new char[999];
 	char* buffer = *msgsChar;
+	memset(buffer, 0, 999);
 	char* bufferIt = buffer + lengthl;
 	
 	//copio la cantidad de mensajes

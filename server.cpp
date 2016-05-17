@@ -30,8 +30,9 @@ int cant_con, input_queue;
 map<int,int> socket_queue;
 map<int,bool> client_state;
 map<int,Elemento*> elementos;
+map<string,int> users;
 Log slog;
-bool quit=false, audit = true;
+bool quit=false, audit = false;
 type_Ventana ventana;
 list<type_Sprite> sprites;
 type_Escenario escenario;
@@ -110,7 +111,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		if (msgs[i] -> type[0] == '2'){
 			tempId = atoi(msgs[i]-> id);
 			tempEl = elementos[tempId];
-			cout << "DEBUG _processMsgs esta queriendo actualizar" << endl;
+			//cout << "DEBUG _processMsgs esta queriendo actualizar" << endl;
 			if (tempEl == NULL){
 				cout << "recibido elemento inexistente " << endl;
 				cout << "id = " << tempId << endl;
@@ -119,7 +120,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 					(msgs[i] -> info[0] == (char) status::RESET) ||
 					(msgs[i] -> info[0] == (char) status::PAUSA)){
 
-					cout << "_processMsgs DEBUG nuevoEvento = " << msgs[i] -> info[0] << endl;
+					//cout << "_processMsgs DEBUG nuevoEvento = " << msgs[i] -> info[0] << endl;
 
 					newEvent = true;
 					event = (status) msgs[i] -> info[0];
@@ -133,17 +134,17 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 						(tempEl -> getEstado() == status::RESET) ||
 						(tempEl -> getEstado() == status::PAUSA)){
 
-					cout << "_processMsgs DEBUG viejoEvento = " << (char)tempEl -> getEstado() << endl;
+					//cout << "_processMsgs DEBUG viejoEvento = " << (char)tempEl -> getEstado() << endl;
 					oldEvent = true;
 					event = tempEl -> getEstado();
 					tempEl-> update(msgs[i]);
 
 				}
 				else{
-					cout << "_processMsgs DEBUG info = " << msgs[i] -> info[0] << endl;
+					//cout << "_processMsgs DEBUG info = " << msgs[i] -> info[0] << endl;
 					tempEl-> update(msgs[i]);
 				}
-				cout << "DEBUG _processMsgs actualizo el elemento" << endl;
+				//cout << "DEBUG _processMsgs actualizo el elemento" << endl;
 
 			}
 		}
@@ -621,9 +622,10 @@ void leerXML(int &cantMaxClientes, int &puerto){
 
 
 
-Elemento* genNewPlayer(int playerId){
+Elemento* genNewPlayer(int playerId, string username){
 	int anchoPantalla = 640 / 4;
 	int altura = 50;
+	users[username] = playerId;
 	Elemento* newPlayer = new Elemento(playerId, anchoPantalla * playerId, altura);
 	elementos[playerId] = newPlayer;
 
@@ -662,7 +664,8 @@ int main(int argc, char **argv)
 
 	struct gst* conMsg[2];
 	char* buffer;
-	int playerId = 1, bufferLen;
+	int playerId = 1, bufferLen, newId;
+	string newUsername;
 
 	 while (1) {
 
@@ -670,6 +673,7 @@ int main(int argc, char **argv)
 
 		 //Accept connection from client
 		 newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &cli_len);
+
 		 struct timeval timeout;
 		 timeout.tv_sec = 120;
 		 timeout.tv_usec = 0;
@@ -683,7 +687,21 @@ int main(int argc, char **argv)
 		 if (newsockfd < 0) {
 			slog.writeErrorLine("ERROR on accept");
 		 }else{
-			if (cant_con == max_con){
+
+
+			 conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
+			 bufferLen = encodeMessages(&buffer, conMsg, 1);
+			 send(newsockfd, buffer, bufferLen ,0);
+			 delete buffer;
+
+			 //Leo el nombre
+			 buffer = new char[BUFLEN];
+			 bufferLen = recv(newsockfd, buffer, bufferLen, 0);
+
+			 newUsername = string(buffer);
+			 newId = users[newUsername];
+
+			if ((cant_con == max_con)&&(!newId)){
 
 				conMsg[0] = genAdminGst(0, command::CON_FAIL);
 				bufferLen = encodeMessages(&buffer, conMsg, 1);
@@ -692,8 +710,15 @@ int main(int argc, char **argv)
 				delete buffer;
 			}else{
 
-				conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
-				conMsg[1] = genUpdateGstFromElemento(genNewPlayer(playerId));
+				if (!newId){
+					conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
+					conMsg[1] = genUpdateGstFromElemento(genNewPlayer(playerId, newUsername));
+				}
+				else{
+					conMsg[0] = genAdminGst(newId, command::CON_SUCCESS);
+					conMsg[1] = genUpdateGstFromElemento(elementos[newId]);
+				}
+
 				bufferLen = encodeMessages(&buffer, conMsg, 2);
 				if (audit)
 					cout << "AUDIT snd: " << buffer << endl;
@@ -707,6 +732,7 @@ int main(int argc, char **argv)
 				   	SDL_UnlockMutex(mutexClientState);
 				}
 				manageNewConnection(newsockfd);
+				cout << "El usuario " << newUsername << " se ha conectado corretamente." << endl;
 				delete buffer;
 				playerId++;
 
