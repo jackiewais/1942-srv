@@ -322,7 +322,7 @@ string default_elemento_posicion_x = "10";
 string default_elemento_posicion_y = "15";
 string default_velDesplazamiento = "10";
 string default_velocidadDisparos = "6";
-string default_sprite_path = "/home/lucia/git/game-1986/lu.bmp";
+string default_sprite_path = "/home/lucia/git/game-1986/vacio.bmp";
 //===================VALORES DEFAULT====================================
 
 
