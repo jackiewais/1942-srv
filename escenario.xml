@@ -8,7 +8,7 @@
 	<sprites>
 		<sprite>
 			<id>PELOTA</id>
-			<path>/home/lucia/git/game-1986/sprites/_pelota.png</path>
+			<path>/home/lucia/git/game-1986/sprites/pelota.png</path>
 			<cantidad>1</cantidad>
 			<ancho>10</ancho>
 			<alto>10</alto>
