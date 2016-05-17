@@ -189,12 +189,15 @@ type_datosServer Parser::parseXMLServer(const char * nombreArchivo, Log * log) {
 	char* puerto = nodo_puerto->value();
 	xml_node<> * nodo_log = nodo_raiz->first_node("log");
 	char* level = nodo_log->value();
+	xml_node<> * nodo_audit = nodo_raiz->first_node("audit");
+	char* audit = nodo_audit->value();
 
 	if (validarCamposServer(cantMax, puerto)) {
 		type_datosServer unXML;
 		unXML.cantMaxClientes = atoi(cantMax);
 		unXML.puerto = atoi(puerto);
 		unXML.logLevel = atoi(level);
+		unXML.audit = atoi(audit);
 		return unXML;
 	} else {
 		log->writeErrorLine("puerto y/o cantidad maxima invalidos");
@@ -319,7 +322,7 @@ string default_elemento_posicion_x = "10";
 string default_elemento_posicion_y = "15";
 string default_velDesplazamiento = "10";
 string default_velocidadDisparos = "6";
-string default_sprite_path = "Images/vacio.png";
+string default_sprite_path = "/home/lucia/git/game-1986/lu.bmp";
 //===================VALORES DEFAULT====================================
 
 
@@ -358,6 +361,12 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 	type_Escenario escenario;
 	type_Fondo fondo;
 	type_Ventana ventana;
+
+	log->writeLine("Comenzamos a validar y obtener los datos de la cantidad de jugadores.");
+	xml_node<> * nodo_cantJug = nodo_raiz->first_node("cantidadDeJugadores");
+	char * cantJug = nodo_cantJug->value();
+	graficos.cantJug = atoi(cantJug);
+	log->writeLine("Hemos obtenido los datos de la cantidad de jugadores exitosamente.");
 
 	log->writeLine("Comenzamos a validar y obtener los datos sobre el LOG del archivo.");
 	//===========================LOG===============================

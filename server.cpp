@@ -26,13 +26,13 @@ using namespace queueManager;
 SDL_mutex *mutexQueue;
 SDL_mutex *mutexCantClientes;
 SDL_mutex *mutexClientState;
-int cant_con, input_queue;
+int cant_con, input_queue, cantJug, audit;
 map<int,int> socket_queue;
 map<int,bool> client_state;
 map<int,Elemento*> elementos;
 map<string,int> users;
 Log slog;
-bool quit=false, audit = false;
+bool quit=false;
 type_Ventana ventana;
 list<type_Sprite> sprites;
 type_Escenario escenario;
@@ -591,9 +591,11 @@ void leerXMLEscenario() {
 	sprites = xml.sprites;
 	escenario = xml.escenario;
 	jugador = xml.avion;
+	cantJug = xml.cantJug;
+	slog.writeLine("Cantidad de jugadores: " + to_string(cantJug));
 }
 
-void leerXML(int &cantMaxClientes, int &puerto){
+void leerXML(int &cantMaxClientes, int &puerto, int &audit){
 
 	type_datosServer xml;
 	string path;
@@ -618,6 +620,7 @@ void leerXML(int &cantMaxClientes, int &puerto){
 
 	cantMaxClientes = xml.cantMaxClientes;
 	puerto = xml.puerto;
+	audit = xml.audit;
 }
 
 
@@ -648,9 +651,10 @@ int main(int argc, char **argv)
 
 	slog.writeLine("Starting...");
 
-	leerXML(max_con,port_number);
+	leerXML(max_con,port_number, audit);
 	slog.writeLine("Port: " + to_string(port_number));
 	slog.writeLine("Max connections: " + to_string(max_con));
+	slog.writeLine("Audit: " + to_string(audit));
 
 	slog.writeLine("Leyendo XML de configuracion del juego...");
 	leerXMLEscenario();

@@ -28,6 +28,7 @@ namespace Parser {
 		int cantMaxClientes;
 		int puerto;
 		unsigned short logLevel;
+		int audit;
 	};
 
 	struct type_mensaje {
@@ -93,6 +94,7 @@ namespace Parser {
 	};
 
 	struct type_DatosGraficos{
+		int cantJug;
 		int logLevel;
 		type_Ventana ventana;
 		list<type_Sprite> sprites;

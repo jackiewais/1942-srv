@@ -5,6 +5,7 @@
         <xs:element type="xs:byte" name="CantidadMaximaClientes"/>
         <xs:element type="xs:short" name="puerto"/>
         <xs:element type="xs:byte" name="log"/>
+        <xs:element type="xs:byte" name="audit"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
