@@ -1,5 +1,5 @@
 <servidor>
-	<cantidadDeJugadores>2</cantidadDeJugadores>
+	<cantidadDeJugadores>3</cantidadDeJugadores>
 	<log>1</log>
 	<ventana>
 		<ancho>500</ancho>
@@ -8,7 +8,7 @@
 	<sprites>
 		<sprite>
 			<id>PELOTA</id>
-			<path>/home/lucia/git/game-1986/sprites/pelota.png</path>
+			<path>sprites/pelota2.png</path>
 			<cantidad>1</cantidad>
 			<ancho>10</ancho>
 			<alto>10</alto>
@@ -22,28 +22,28 @@
 		</sprite>
 		<sprite>
 			<id>DISPARO</id>
-			<path>/home/lucia/git/game-1986/sprites/jugadorPateando.png</path>
+			<path>sprites/jugadorPateando.png</path>
 			<cantidad>1</cantidad>
 			<ancho>10</ancho>
 			<alto>10</alto>
 		</sprite>
 		<sprite>
 			<id>VUELTA</id>
-			<path>/home/lucia/git/game-1986/sprites/truco.png</path>
+			<path>sprites/truco.png</path>
 			<cantidad>1</cantidad>
 			<ancho>10</ancho>
 			<alto>10</alto>
 		</sprite>
 		<sprite>
 			<id>ENFERMERA</id>
-			<path>/home/lucia/git/game-1986/enfermera</path>
+			<path>enfermera</path>
 			<cantidad>1</cantidad>
-			<ancho>5</ancho>
-			<alto>5</alto>
+			<ancho>100</ancho>
+			<alto>100</alto>
 		</sprite>
 		<sprite>
 			<id>FONDO</id>
-			<path>/home/lucia/git/game-1986/background.bmp</path>
+			<path>background.bmp</path>
 			<cantidad>1</cantidad>
 			<ancho>5</ancho>
 			<alto>5</alto>
@@ -80,7 +80,7 @@
 				</posicion>
 			</elemento>
 			<elemento>
-				<spriteId>PELOTA</spriteId>
+				<spriteId>ENFERMERA</spriteId>
 				<posicion>
 					<x>100</x>
 					<y>100</y>
@@ -89,8 +89,8 @@
 			<elemento>
 				<spriteId>ENFERMERA</spriteId>
 				<posicion>
-					<x>15</x>
-					<y>20</y>
+					<x>200</x>
+					<y>200</y>
 				</posicion>
 			</elemento>
 		</elementos>
