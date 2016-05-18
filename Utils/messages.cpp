@@ -155,6 +155,30 @@ int encodeMessages(char** msgsChar, struct gst** msgs, int qty){
 	return pkglen;
 }
 
+struct gst* genGstFromVelocidades(int velocidadDesplazamiento, int velocidadDisparos) {
+	struct gst* newMsg = new struct gst;
+	newMsg -> type[0] = (char) msgType::OBJETO;
+
+	char velocidad[posl];
+	memcpy(newMsg -> id, "SP", idl);
+
+	intToFixedChar(velocidadDesplazamiento, velocidad, posl);
+	memcpy(newMsg -> ancho, velocidad, posl);
+
+	intToFixedChar(velocidadDisparos, velocidad, posl);
+	memcpy(newMsg -> alto, velocidad, posl);
+
+	intToFixedChar(0, velocidad, posl);
+	memcpy(newMsg -> posx, velocidad, posl);
+
+	intToFixedChar(0, velocidad, posl);
+	memcpy(newMsg -> posy, velocidad, posl);
+
+	memset(newMsg -> path, '=', pathl);
+
+	return newMsg;
+}
+
 struct gst* genGstFromCantJug(int cantJug) {
 	struct gst* newMsg = new struct gst;
 

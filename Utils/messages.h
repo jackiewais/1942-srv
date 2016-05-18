@@ -107,5 +107,7 @@ struct gst* genGstFromVentana(Parser::type_Ventana* ventana);
 
 struct gst* genGstFromCantJug(int cantJug);
 
+struct gst* genGstFromVelocidades(int velocidadDesplazamiento, int velocidadDisparos);
+
 
 #endif
