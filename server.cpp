@@ -33,6 +33,7 @@ map<int,Elemento*> elementos;
 map<string,int> users;
 Log slog;
 bool quit=false;
+bool readyToStart = false;
 type_Ventana ventana;
 list<type_Sprite> sprites;
 type_Escenario escenario;
@@ -121,13 +122,14 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 					(msgs[i] -> info[0] == (char) status::PAUSA)){
 
 					//cout << "_processMsgs DEBUG nuevoEvento = " << msgs[i] -> info[0] << endl;
-
+				if(readyToStart){
 					newEvent = true;
 					event = (status) msgs[i] -> info[0];
 
 					prevStatus = tempEl -> getEstado();
 					tempEl-> update(msgs[i]);
 					tempEl-> updateStatus(prevStatus);
+				}
 				}
 
 				else if ((tempEl -> getEstado() == status::START) ||
@@ -707,7 +709,7 @@ int main(int argc, char **argv)
 			 newUsername = string(buffer);
 			 newId = users[newUsername];
 
-			if ((cant_con == max_con)&&(!newId)){
+			if ((cant_con == cantJug)&&(!newId)){
 
 				conMsg[0] = genAdminGst(0, command::CON_FAIL);
 				bufferLen = encodeMessages(&buffer, conMsg, 1);
@@ -731,6 +733,7 @@ int main(int argc, char **argv)
 				send(newsockfd, buffer, bufferLen, 0);
 				if (SDL_LockMutex(mutexCantClientes) == 0) {
 					cant_con++;
+				readyToStart = (cant_con == cantJug);
 					SDL_UnlockMutex(mutexCantClientes);
 				}
 				if (SDL_LockMutex(mutexClientState) == 0) {
