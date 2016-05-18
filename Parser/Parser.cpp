@@ -322,7 +322,7 @@ string default_elemento_posicion_x = "10";
 string default_elemento_posicion_y = "15";
 string default_velDesplazamiento = "10";
 string default_velocidadDisparos = "6";
-string default_sprite_path = "/home/lucia/git/game-1986/vacio.bmp";
+string default_sprite_path = "vacio.bmp";
 //===================VALORES DEFAULT====================================
 
 
@@ -416,6 +416,7 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 		sprite_id = nodo_sprite_id->value();
 		xml_node<> * nodo_sprite_path = nodo_sprite->first_node("path");
 		sprite_path = nodo_sprite_path->value();
+		cout << sprite_path << endl;
 		xml_node<> * nodo_sprite_cantidad = nodo_sprite->first_node("cantidad");
 		sprite_cantidad = nodo_sprite_cantidad->value();
 		xml_node<> * nodo_sprite_ancho = nodo_sprite->first_node("ancho");
@@ -435,6 +436,7 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 		if (!elSprite.good()) {
 			sprite_path = strdup(default_sprite_path.c_str());
 			log->writeWarningLine("Archivo inexistente para el path del SPRITE, se usa la imagen default.");
+			
 		}
 		// Resguardamos la información obtenida en el nodo: SPRITES.
 		sprite.id = formatTipoSprite(toUpercase(sprite_id));
