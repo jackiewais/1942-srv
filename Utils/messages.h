@@ -74,7 +74,8 @@ enum msgType:char{
 	UPDATE = '2',
 	REMOVE = '3',
 	CONTROL = '8',
-	OBJETO = '0'
+	OBJETO = '0',
+	CANT_JUG = '9'
 
 };
 
@@ -103,6 +104,8 @@ struct gst* genGstFromFondo(Parser::type_Escenario * escenario, char path[pathl]
 struct gst* genGstFromElemento(Parser::type_Elemento * elem, char path[pathl]);
 
 struct gst* genGstFromVentana(Parser::type_Ventana* ventana);
+
+struct gst* genGstFromCantJug(int cantJug);
 
 
 #endif

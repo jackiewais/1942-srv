@@ -155,6 +155,18 @@ int encodeMessages(char** msgsChar, struct gst** msgs, int qty){
 	return pkglen;
 }
 
+struct gst* genGstFromCantJug(int cantJug) {
+	struct gst* newMsg = new struct gst;
+
+	newMsg -> type[0] = (char) msgType::CANT_JUG;
+
+	char cantidad[idl];
+	intToFixedChar(cantJug, cantidad, idl);
+	memcpy(newMsg -> id, cantidad, idl);
+
+	return newMsg;
+}
+
 struct gst* genGstFromFondo(Parser::type_Escenario * escenario, char path[pathl]) {
 	struct gst* newMsg = new struct gst;
 

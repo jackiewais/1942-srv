@@ -165,14 +165,15 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		char pathFondo[pathl], pathElemento[pathl];
 		memset(pathFondo, '=', pathl);
 		memset(pathElemento, '=', pathl);
-		int i = 2;
+		int i = 3;
 		buscarPathSprite(escenario.fondo.spriteId, pathFondo);
 
-		answerMsgsQty = escenario.elementos.size() + 2;
+		answerMsgsQty = escenario.elementos.size() + 3;
 		*answerMsgs = new struct gst*[answerMsgsQty];
 		struct gst** answerIt = (*answerMsgs);
-		answerIt[0] = genGstFromFondo(&escenario, pathFondo);
-		answerIt[1] = genGstFromVentana(&ventana);
+		answerIt[0] = genGstFromCantJug(cantJug);
+		answerIt[1] = genGstFromFondo(&escenario, pathFondo);
+		answerIt[2] = genGstFromVentana(&ventana);
 		list<type_Elemento>::iterator ite;
 		for (ite = escenario.elementos.begin(); ite != escenario.elementos.end(); ite ++) {
 			buscarPathSprite((ite) -> spriteId, pathElemento);
