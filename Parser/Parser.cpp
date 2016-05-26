@@ -326,7 +326,7 @@ string default_sprite_path = "vacio.bmp";
 //===================VALORES DEFAULT====================================
 
 
-type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * log){
+type_DatosGraficos* Parser::parseXMLServerMap(const char * nombreArchivo, Log * log){
 	xml_document<> archivo;
 	xml_node<> * nodo_raiz;
 
@@ -356,7 +356,7 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 
 	nodo_raiz = archivo.first_node("servidor");
 
-	type_DatosGraficos graficos;
+	type_DatosGraficos* graficos = new struct type_DatosGraficos;
 	type_Avion avion;
 	type_Escenario escenario;
 	type_Fondo fondo;
@@ -365,7 +365,7 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 	log->writeLine("Comenzamos a validar y obtener los datos de la cantidad de jugadores.");
 	xml_node<> * nodo_cantJug = nodo_raiz->first_node("cantidadDeJugadores");
 	char * cantJug = nodo_cantJug->value();
-	graficos.cantJug = atoi(cantJug);
+	graficos -> cantJug = atoi(cantJug);
 	log->writeLine("Hemos obtenido los datos de la cantidad de jugadores exitosamente.");
 
 	log->writeLine("Comenzamos a validar y obtener los datos sobre el LOG del archivo.");
@@ -377,7 +377,7 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 	if(!sonDigitos(level)){ level = strdup(default_level.c_str());
 		log->writeWarningLine("Valor para el LOG invalido, usamos el valor por defecto.");}
 	// Resguardamos la información obtenida en el nodo: LOG.
-	graficos.logLevel = atoi(level);
+	graficos -> logLevel = atoi(level);
 	//===========================LOG===============================
 	log->writeLine("Hemos obtenido los datos sobre el LOG del archivo exitosamente.");
 
@@ -397,7 +397,7 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 	// Resguardamos la información obtenida en el nodo: VENTANA.
 	ventana.ancho = atoi(ventana_ancho);
 	ventana.alto = atoi(ventana_alto);
-	graficos.ventana = ventana;
+	graficos -> ventana = ventana;
 	//=========================VENTANA=============================
 	log->writeLine("Hemos obtenido los datos sobre la VENTANA del archivo exitosamente.");
 
@@ -445,7 +445,7 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 		sprite.ancho;
 		sprite.alto;
 		// Lo agregamos a la lista principal de SPRITES.
-		graficos.sprites.push_back(sprite);
+		graficos -> sprites.push_back(sprite);
 	}
 	//==========================SPRITE=============================
 	log->writeLine("Hemos obtenido los datos sobre los SPRITES del archivo exitosamente.");
@@ -522,7 +522,7 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 		elemento.posicionY = atoi(elemento_posicion_y);
 		escenario.elementos.push_back(elemento);
 	}
-	graficos.escenario = escenario;
+	graficos -> escenario = escenario;
 	//=======================ELEMENTO=============================
 	log->writeLine("Hemos obtenido los datos sobre los ELEMENTOS del archivo exitosamente.");
 
@@ -553,7 +553,7 @@ type_DatosGraficos Parser::parseXMLServerMap(const char * nombreArchivo, Log * l
 	avion.avionSpriteId = formatTipoSprite(toUpercase(avionSpriteId));
 	avion.vueltaSpriteId = formatTipoSprite(toUpercase(vueltaSpriteId));
 	avion.disparosSpriteId = formatTipoSprite(toUpercase(disparosSpriteId));
-	graficos.avion = avion;
+	graficos -> avion = avion;
 	//==========================AVION==============================
 	log->writeLine("Hemos obtenido los datos sobre el AVION del archivo exitosamente.");
 

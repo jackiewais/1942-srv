@@ -123,7 +123,7 @@ namespace Parser {
 	// METODOS RELACIONADOS CON LA SEGUNDA ENTREGA.
 	// ================================================================================
 
-	type_DatosGraficos parseXMLServerMap(const char * nombreArchivo, Log * log);
+	type_DatosGraficos* parseXMLServerMap(const char * nombreArchivo, Log * log);
 
 	// ================================================================================
 };

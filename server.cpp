@@ -89,12 +89,15 @@ void buscarPathSprite(Parser::spriteType idSprite, char path[pathl]) {
 
 	for (it = sprites.begin(); it != sprites.end(); it ++) {
 		if ((it)->id == idSprite) {
+			cout << "DEBUG buscarParhSprite: path encontrado" << endl;
 			encontrado = true;
 			memset(path, '\0', pathl);
 			memcpy(path, (it)->path, pathl);
+			cout << "DEBUG buscarParhSprite: path encontrado" << endl;
 		}
 	}
 	if (!encontrado)
+		cout << "DEBUG buscarParhSprite: path no encontrado" << endl;
 		memcpy(path, "-", pathl);
 }
 
@@ -169,6 +172,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		memset(pathElemento, '=', pathl);
 		int i = 4;
 		buscarPathSprite(escenario.fondo.spriteId, pathFondo);
+		cout << "Debug processMsgs: pathfondo = " << pathFondo << endl;
 
 		answerMsgsQty = escenario.elementos.size() + 4;
 		*answerMsgs = new struct gst*[answerMsgsQty];
@@ -587,15 +591,15 @@ static int exitManager (void *data) {
 }
 
 void leerXMLEscenario() {
-	type_DatosGraficos xml;
+	type_DatosGraficos* xml;
 
 	xml = parseXMLServerMap(pathXMLEscenario.c_str(), &slog);
 
-	ventana = xml.ventana;
-	sprites = xml.sprites;
-	escenario = xml.escenario;
-	jugador = xml.avion;
-	cantJug = xml.cantJug;
+	ventana = xml -> ventana;
+	sprites = xml -> sprites;
+	escenario = xml -> escenario;
+	jugador = xml -> avion;
+	cantJug = xml -> cantJug;
 	slog.writeLine("Cantidad de jugadores: " + to_string(cantJug));
 }
 
@@ -709,7 +713,8 @@ int main(int argc, char **argv)
 			 newUsername = string(buffer);
 			 newId = users[newUsername];
 
-			if ((cant_con == cantJug)&&(!newId)){
+			//			if ((cant_con == cantJug)&&(!newId)){
+			if (((cant_con == cantJug)&&(!newId)) || (readyToStart&&(!newId))){
 
 				conMsg[0] = genAdminGst(0, command::CON_FAIL);
 				bufferLen = encodeMessages(&buffer, conMsg, 1);
