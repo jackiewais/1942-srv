@@ -107,7 +107,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 
 	int answerMsgsQty, tempId;
 	Elemento* tempEl;
-	bool newEvent = false, oldEvent = false, isEscenario = false;
+	bool newEvent = false, oldEvent = false, isEscenario = false, isSprites = false;
 	status event, prevStatus;
 
 	for (int i = 0; i < msgQty; i++){
@@ -163,10 +163,24 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 			if (msgs[i] -> info[0] == (char) command::REQ_SCENARIO) {
 				isEscenario = true;
 			}
+			if (msgs[i] -> info[0] == (char) command::REQ_SPRITES) {
+				isSprites = true;
+			}
 		}
 		delete msgs[i];
 	}
-	if (isEscenario) {
+	if (isSprites) {
+		int i = 0;
+		answerMsgsQty = sprites.size();
+		*answerMsgs = new struct gst*[answerMsgsQty];
+		struct gst** answerIt = (*answerMsgs);
+		list<type_Sprite>::iterator iter;
+		for (iter = sprites.begin(); iter != sprites.end(); iter ++) {
+			answerIt[i] = genGstFromSprite(&(*iter));
+			i++;
+		}
+
+	} else if (isEscenario) {
 		char pathFondo[pathl], pathElemento[pathl];
 		memset(pathFondo, '=', pathl);
 		memset(pathElemento, '=', pathl);

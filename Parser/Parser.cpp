@@ -290,21 +290,19 @@ class myexception: public exception
 
 // Los tipos de Sprites son los siguientes: DISPARO, VUELTA, PELOTA, ENFERMERA, JUGADOR, BLANCO, FONDO
 spriteType formatTipoSprite(char * tipo) {
-	if (strcmp(tipo,"PELOTA")==0)
-		return PELOTA;
-	if (strcmp(tipo,"DISPARO")==0)
-		return DISPARO;
-	if (strcmp(tipo,"VUELTA")==0)
-		return VUELTA;
-	if (strcmp(tipo, "JUGADOR")==0)
-		return JUGADOR;
-	if (strcmp(tipo, "JUGADOR")==0)
-		return JUGADOR;
-	if (strcmp(tipo, "ENFERMERA")==0)
-		return ENFERMERA;
-	if (strcmp(tipo, "FONDO")==0)
-		return FONDO;
-	return BLANCO;
+	if (strcmp(tipo,"PE")==0)
+		return PE;
+	if (strcmp(tipo,"DI")==0)
+		return DI;
+	if (strcmp(tipo,"VU")==0)
+		return VU;
+	if (strcmp(tipo, "JU")==0)
+		return JU;
+	if (strcmp(tipo, "EN")==0)
+		return EN;
+	if (strcmp(tipo, "FO")==0)
+		return FO;
+	return BL;
 }
 
 //===================VALORES DEFAULT====================================
@@ -427,17 +425,10 @@ type_DatosGraficos* Parser::parseXMLServerMap(const char * nombreArchivo, Log * 
 		if(!sonDigitos(sprite_ancho) || !sonDigitos(sprite_alto))
 		{ 	sprite_ancho = strdup(default_sprite_ancho.c_str());
 			sprite_alto = strdup(default_sprite_alto.c_str());
-			log->writeWarningLine("Valoar para el ancho y alto del SPRITE invalido, usamos valores por defecto.");}
+			log->writeWarningLine("Validar para el ancho y alto del SPRITE invalido, usamos valores por defecto.");}
 		if(!sonDigitos(sprite_cantidad))
 		{ sprite_cantidad =  strdup(default_sprite_cantidad.c_str());
-		log->writeWarningLine("Valoar para la cantidad del SPRITE invalido, usamos valores por defecto.");}
-		// Chequeamos la existencia del archivo imagen en cuestión.
-		ifstream elSprite (sprite_path);
-		if (!elSprite.good()) {
-			sprite_path = strdup(default_sprite_path.c_str());
-			log->writeWarningLine("Archivo inexistente para el path del SPRITE, se usa la imagen default.");
-			
-		}
+		log->writeWarningLine("Validar para la cantidad del SPRITE invalido, usamos valores por defecto.");}
 		// Resguardamos la información obtenida en el nodo: SPRITES.
 		sprite.id = formatTipoSprite(toUpercase(sprite_id));
 		sprite.path = sprite_path;
