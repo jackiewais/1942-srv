@@ -8,6 +8,7 @@ int msg1len = typel + idl + posl + posl,
 	msg2len = typel + idl + posl + posl + infol,
 	msg3len = typel + idl,
 	msg8len = typel + idl + infol,
+	msg5len = typel + idl + pathl,
 	msg0lin = typel + idl + posl + posl + posl + posl + pathl;
 
 void intToFixedChar(int n, char* p, int length){
@@ -65,6 +66,11 @@ int decodeMessages(struct gst*** msgs, char* msgsChar){
 		if ((*msgIdx) -> type[0] == '2' || (*msgIdx) -> type[0] == '8'){
 			memcpy((*msgIdx) -> info, charIdx, infol);
 			charIdx += infol;
+		}
+
+		else if ((*msgIdx) -> type[0] == '5'){
+			memcpy((*msgIdx) -> path, charIdx, pathl);
+			charIdx += pathl;
 		}
 
 		else if ((*msgIdx) -> type[0] == '0'){
@@ -144,6 +150,13 @@ int encodeMessages(char** msgsChar, struct gst** msgs, int qty){
 			bufferIt += pathl;
 
 			pkglen += posl + posl + posl + posl + pathl;
+		}
+
+		if ((*msgs) -> type[0] == '5'){
+			memcpy(bufferIt, (*msgs) -> path, pathl);
+			bufferIt += pathl;
+
+			pkglen += pathl;
 		}
 
 		msgs++;
@@ -264,6 +277,22 @@ struct gst* genGstFromVentana(Parser::type_Ventana* ventana){
 	memcpy(newMsg -> posy, charMedida, posl);
 
 	memset(newMsg -> path, '=', pathl);
+
+	return newMsg;
+}
+
+struct gst* genGstFromSprite(Parser::type_Sprite * sprite) {
+	struct gst* newMsg = new struct gst;
+
+	newMsg -> type[0] = (char) msgType::SPRITE;
+
+	char charId[idl];
+	intToFixedChar(sprite->id, charId, idl);
+	cout << "DEBUG genGstFromSprite " << charId << endl;
+	memcpy(newMsg -> id, charId, idl);
+
+	memset(newMsg -> path, '=', pathl);
+	memcpy(newMsg -> path, sprite->path, pathl);
 
 	return newMsg;
 }
