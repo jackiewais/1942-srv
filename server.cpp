@@ -83,6 +83,19 @@ bool check_char(const char* value) {
 	return strlen(value) == 1;
 }
 
+void leerXMLEscenario() {
+	type_DatosGraficos* xml;
+
+	xml = parseXMLServerMap(pathXMLEscenario.c_str(), &slog);
+
+	ventana = xml -> ventana;
+	sprites = xml -> sprites;
+	escenario = xml -> escenario;
+	jugador = xml -> avion;
+	cantJug = xml -> cantJug;
+	slog.writeLine("Cantidad de jugadores: " + to_string(cantJug));
+}
+
 void buscarPathSprite(Parser::spriteType idSprite, char *&path) {
 	list<type_Sprite>::iterator it;
 	bool encontrado = false;
@@ -164,6 +177,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 				}
 			}
 			if (msgs[i] -> info[0] == (char) command::REQ_SCENARIO) {
+				leerXMLEscenario();
 				isEscenario = true;
 			}
 			if (msgs[i] -> info[0] == (char) command::REQ_SPRITES) {
@@ -606,19 +620,6 @@ static int exitManager (void *data) {
 
 	  exit(0);
 	  return 0;
-}
-
-void leerXMLEscenario() {
-	type_DatosGraficos* xml;
-
-	xml = parseXMLServerMap(pathXMLEscenario.c_str(), &slog);
-
-	ventana = xml -> ventana;
-	sprites = xml -> sprites;
-	escenario = xml -> escenario;
-	jugador = xml -> avion;
-	cantJug = xml -> cantJug;
-	slog.writeLine("Cantidad de jugadores: " + to_string(cantJug));
 }
 
 void leerXML(int &cantMaxClientes, int &puerto, int &audit){
