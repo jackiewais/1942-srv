@@ -1,5 +1,5 @@
 <servidor>
-	<cantidadDeJugadores>3</cantidadDeJugadores>
+	<cantidadDeJugadores>1</cantidadDeJugadores>
 	<log>1</log>
 	<ventana>
 		<ancho>500</ancho>
@@ -14,8 +14,22 @@
 			<alto>10</alto>
 		</sprite>
 		<sprite>
-			<id>JU</id>
+			<id>J1</id>
 			<path>sprites/spriteJugador1.png</path>
+			<cantidad>1</cantidad>
+			<ancho>10</ancho>
+			<alto>10</alto>
+		</sprite>
+		<sprite>
+			<id>J2</id>
+			<path>sprites/spriteJugador2.png</path>
+			<cantidad>1</cantidad>
+			<ancho>10</ancho>
+			<alto>10</alto>
+		</sprite>
+		<sprite>
+			<id>J3</id>
+			<path>sprites/spriteJugador3.png</path>
 			<cantidad>1</cantidad>
 			<ancho>10</ancho>
 			<alto>10</alto>
@@ -96,8 +110,8 @@
 		</elementos>
 	</escenario>
 	<avion>
-		<velDesplazamiento>10</velDesplazamiento>
-		<velocidadDisparos>6</velocidadDisparos>
+		<velDesplazamiento>2</velDesplazamiento>
+		<velocidadDisparos>2</velocidadDisparos>
 		<avionSpriteId>JU</avionSpriteId>
 		<vueltaSpriteId>VU</vueltaSpriteId>
 		<disparosSpriteId>DI</disparosSpriteId>

@@ -51,7 +51,7 @@ namespace Parser {
 	// DATOS RELACIONADOS CON LA SEGUNDA ENTREGA.
 	// ================================================================================
 
-	enum spriteType {DI, VU, PE, EN, JU, FO, BL};
+	enum spriteType {DI, VU, PE, EN, J1, J2, J3, FO, BL};
 
 	struct type_Ventana{
 		int ancho;

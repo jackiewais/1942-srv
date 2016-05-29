@@ -296,8 +296,12 @@ spriteType formatTipoSprite(char * tipo) {
 		return DI;
 	if (strcmp(tipo,"VU")==0)
 		return VU;
-	if (strcmp(tipo, "JU")==0)
-		return JU;
+	if (strcmp(tipo, "J1")==0)
+		return J1;
+	if (strcmp(tipo, "J2")==0)
+		return J2;
+	if (strcmp(tipo, "J3")==0)
+		return J3;
 	if (strcmp(tipo, "EN")==0)
 		return EN;
 	if (strcmp(tipo, "FO")==0)
