@@ -301,7 +301,6 @@ struct gst* genUpdateGstFromElemento(Elemento* elemento){
 
 	struct gst* newMsg = new struct gst;
 	cleanGst(newMsg);
-
 	newMsg -> type[0] = (char) msgType::UPDATE;
 
 	char charId[idl], charPos[posl];
@@ -315,6 +314,7 @@ struct gst* genUpdateGstFromElemento(Elemento* elemento){
 	memcpy(newMsg -> posy, charPos, posl);
 
 	newMsg -> info[0] = (char) elemento -> getEstado();
+
 	return newMsg;
 }
 

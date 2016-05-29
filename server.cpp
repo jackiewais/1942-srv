@@ -390,16 +390,16 @@ static int doReading (void *sockfd) {
    free(sockfd);
    char messageLength[3];
    int messageSize;
-   char bufferingMessage[BUFLEN];
+   //char bufferingMessage[BUFLEN];
 
    //Receive a message from client
    while(!finish && !quit){
 
        //cout << "DEBUG doReading sock = " << sock << endl;
        //Read client's message
-        bzero(bufferingMessage,BUFLEN);
+        //bzero(bufferingMessage,BUFLEN);
         bzero(buffer,BUFLEN);
-           n = recv(sock, buffer, BUFLEN-1, 0);
+        n = recv(sock, buffer, BUFLEN-1, 0);
            //cout << "DEBUG DOREADING n = " << n << endl;
         if (audit)
             cout << "AUDIT rcv: " << buffer << endl;
@@ -529,7 +529,7 @@ void createAndDetachThread(SDL_ThreadFunction fn, const char *name, int data){
 void manageNewConnection(int newsockfd){
 
 	int msgqid;
-	usleep(1000*1000);
+	//usleep(1000*1000);
 
 	//Create the output messages queue for the socket
 	if (getQueue(msgqid)) {
@@ -714,7 +714,6 @@ int main(int argc, char **argv)
 			slog.writeErrorLine("ERROR on accept");
 		 }else{
 
-
 			 conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
 			 bufferLen = encodeMessages(&buffer, conMsg, 1);
 			 send(newsockfd, buffer, bufferLen ,0);
@@ -722,14 +721,15 @@ int main(int argc, char **argv)
 
 			 //Leo el nombre
 			 buffer = new char[BUFLEN];
+			 bzero(buffer,BUFLEN);
 			 bufferLen = recv(newsockfd, buffer, bufferLen, 0);
 
 			 newUsername = string(buffer);
-			 newId = users[newUsername];
+			 bool alreadyAPlayer = (users.find(newUsername) != users.end());
+			 //newId = users[newUsername];
 
-			//			if ((cant_con == cantJug)&&(!newId)){
-			if (((cant_con == cantJug)&&(!newId)) || (readyToStart&&(!newId))){
-
+			if (!alreadyAPlayer && (cant_con == cantJug || readyToStart) ){
+				//Game is not accepting new players
 				conMsg[0] = genAdminGst(0, command::CON_FAIL);
 				bufferLen = encodeMessages(&buffer, conMsg, 1);
 				send(newsockfd, buffer, bufferLen ,0);
@@ -737,11 +737,12 @@ int main(int argc, char **argv)
 				delete buffer;
 			}else{
 
-				if (!newId){
+				if (!alreadyAPlayer){
 					conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
 					conMsg[1] = genUpdateGstFromElemento(genNewPlayer(playerId, newUsername));
 				}
 				else{
+					newId = users[newUsername];
 					conMsg[0] = genAdminGst(newId, command::CON_SUCCESS);
 					conMsg[1] = genUpdateGstFromElemento(elementos[newId]);
 				}
@@ -752,7 +753,7 @@ int main(int argc, char **argv)
 				send(newsockfd, buffer, bufferLen, 0);
 				if (SDL_LockMutex(mutexCantClientes) == 0) {
 					cant_con++;
-				readyToStart = (cant_con == cantJug);
+					readyToStart = (cant_con == cantJug);
 					SDL_UnlockMutex(mutexCantClientes);
 				}
 				if (SDL_LockMutex(mutexClientState) == 0) {

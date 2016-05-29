@@ -2,5 +2,5 @@
 	<CantidadMaximaClientes>5</CantidadMaximaClientes>
 	<puerto>5001</puerto>
 	<log>1</log>
-	<audit>1</audit>
+	<audit>0</audit>
 </servidor>

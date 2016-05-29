@@ -1,6 +1,9 @@
 <servidor>
-
+<<<<<<< HEAD
+	<cantidadDeJugadores>1</cantidadDeJugadores>
+=======
 	<cantidadDeJugadores>2</cantidadDeJugadores>
+>>>>>>> Se corrigen problemas de reconexion
 	<log>1</log>
 	<ventana>
 		<ancho>500</ancho>
