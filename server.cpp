@@ -83,22 +83,25 @@ bool check_char(const char* value) {
 	return strlen(value) == 1;
 }
 
-void buscarPathSprite(Parser::spriteType idSprite, char path[pathl]) {
+void buscarPathSprite(Parser::spriteType idSprite, char *&path) {
 	list<type_Sprite>::iterator it;
 	bool encontrado = false;
 
 	for (it = sprites.begin(); it != sprites.end(); it ++) {
 		if ((it)->id == idSprite) {
-			cout << "DEBUG buscarParhSprite: path encontrado" << endl;
+			cout << "DEBUG buscarParhSprite (it)->path: " << (it)->path << endl;
 			encontrado = true;
-			memset(path, '\0', pathl);
-			memcpy(path, (it)->path, pathl);
-			cout << "DEBUG buscarParhSprite: path encontrado" << endl;
+			//memset(path, '\0', pathl);
+			//memcpy(path, (it)->path, pathl);
+			path = (it)->path;
+			cout << "DEBUG buscarParhSprite path: " << path << endl;
+			break;
 		}
 	}
-	if (!encontrado)
+	if (!encontrado){
 		cout << "DEBUG buscarParhSprite: path no encontrado" << endl;
-		memcpy(path, "-", pathl);
+		path = "-";
+	}
 }
 
 int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answerMsgs){
@@ -181,12 +184,12 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		}
 
 	} else if (isEscenario) {
-		char pathFondo[pathl], pathElemento[pathl];
-		memset(pathFondo, '=', pathl);
-		memset(pathElemento, '=', pathl);
+		char *pathFondo, *pathElemento;
+		//memset(pathFondo, '=', pathl);
+		//memset(pathElemento, '=', pathl);
 		int i = 4;
 		buscarPathSprite(escenario.fondo.spriteId, pathFondo);
-		cout << "Debug processMsgs: pathfondo = " << pathFondo << endl;
+		cout << "DEBUG buscarParhSprite pathFondo: " << pathFondo << endl;
 
 		answerMsgsQty = escenario.elementos.size() + 4;
 		*answerMsgs = new struct gst*[answerMsgsQty];
@@ -198,6 +201,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		list<type_Elemento>::iterator ite;
 		for (ite = escenario.elementos.begin(); ite != escenario.elementos.end(); ite ++) {
 			buscarPathSprite((ite) -> spriteId, pathElemento);
+			cout << "DEBUG buscarParhSprite pathElemento: " << pathElemento << endl;
 			answerIt[i] = genGstFromElemento(&(*ite), pathElemento);
 			i++;
 		}
