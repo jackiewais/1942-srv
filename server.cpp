@@ -26,14 +26,17 @@ using namespace queueManager;
 SDL_mutex *mutexQueue;
 SDL_mutex *mutexCantClientes;
 SDL_mutex *mutexClientState;
+SDL_mutex *mutexProgress;
 int cant_con, input_queue, cantJug, audit;
 map<int,int> socket_queue;
 map<int,bool> client_state;
 map<int,Elemento*> elementos;
 map<string,int> users;
+unsigned int *progress;
 Log slog;
-bool quit=false;
+bool quit = false;
 bool readyToStart = false;
+bool playing = false;
 type_Ventana ventana;
 list<type_Sprite> sprites;
 type_Escenario escenario;
@@ -96,35 +99,66 @@ void leerXMLEscenario() {
 	slog.writeLine("Cantidad de jugadores: " + to_string(cantJug));
 }
 
-void buscarPathSprite(Parser::spriteType idSprite, char *&path) {
+void resetProgress(){
+	if (SDL_LockMutex(mutexProgress) == 0) {
+		for (int i = 0; i < cantJug; i++ ){
+			progress[i] = 1;
+		}
+	SDL_UnlockMutex(mutexProgress);
+	}
+}
+
+void addProgress(int id){
+	if (SDL_LockMutex(mutexProgress) == 0) {
+		progress[id -1]++;
+	SDL_UnlockMutex(mutexProgress);
+	}
+}
+
+int getProgress(){
+	int temp = 1;
+	if (SDL_LockMutex(mutexProgress) == 0) {
+		for (int i = 0; i < cantJug; i++ ){
+			if (progress[i] > temp){
+				temp = progress[i];
+			}
+		}
+	SDL_UnlockMutex(mutexProgress);
+	}
+	return temp;
+}
+
+void buscarPathSprite(Parser::spriteType idSprite, char*& path) {
 	list<type_Sprite>::iterator it;
 	bool encontrado = false;
-
-	for (it = sprites.begin(); it != sprites.end(); it ++) {
-		if ((it)->id == idSprite) {
-			cout << "DEBUG buscarParhSprite (it)->path: " << (it)->path << endl;
+	it = sprites.begin();
+	while (!encontrado && (it != sprites.end())){
+		encontrado = (it)->id == idSprite;
+		if (encontrado){
+			//cout << "DEBUG buscarParhSprite (it)->path: " << (it)->path << endl;
 			encontrado = true;
 			//memset(path, '\0', pathl);
-			//memcpy(path, (it)->path, pathl);
+			//memcpy(path, it -> path, pathl);
 			path = (it)->path;
-			cout << "DEBUG buscarParhSprite path: " << path << endl;
-			break;
+			//cout << "DEBUG buscarParhSprite path: " << path << endl;
 		}
+		it++;
 	}
 	if (!encontrado){
-		cout << "DEBUG buscarParhSprite: path no encontrado" << endl;
-		path = "-";
+		//cout << "DEBUG buscarParhSprite: path no encontrado" << endl;
+		path[0] = '-';
 	}
 }
 
 int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answerMsgs){
 
 	//cout << "DEBUG entro a _processMsgs" << endl;
+	//cout << "DEBUG _processMessages in" << endl;
 
-	int answerMsgsQty, tempId;
+	int answerMsgsQty = 0, tempId;
 	Elemento* tempEl;
 	bool newEvent = false, oldEvent = false, isEscenario = false, isSprites = false;
-	status event, prevStatus;
+	status event, prevStatus, tempSta;
 
 	for (int i = 0; i < msgQty; i++){
 
@@ -136,41 +170,64 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 				cout << "recibido elemento inexistente " << endl;
 				cout << "id = " << tempId << endl;
 			}else {
-				if ((msgs[i] -> info[0] == (char) status::START) ||
-					(msgs[i] -> info[0] == (char) status::RESET) ||
-					(msgs[i] -> info[0] == (char) status::PAUSA)){
+				tempSta = (status) msgs[i] -> info[0];
+				if ((tempSta == status::START) ||
+					(tempSta == status::RESET) ||
+					(tempSta == status::PAUSA)){
 
 					//cout << "_processMsgs DEBUG nuevoEvento = " << msgs[i] -> info[0] << endl;
-				if(readyToStart){
-					newEvent = true;
-					event = (status) msgs[i] -> info[0];
+					if(readyToStart){
 
-					prevStatus = tempEl -> getEstado();
-					tempEl-> update(msgs[i]);
-					tempEl-> updateStatus(prevStatus);
-				}
+						if ((tempSta == status::START) && !playing){
+							resetProgress();
+							playing = true;
+						}
+						else if (tempSta == status::PAUSA){
+							playing = !playing;
+						}
+						else{		//tempSta == RESET
+							resetProgress();
+							playing = true;
+						}
+
+						newEvent = true;
+						event = tempSta;
+
+						prevStatus = tempEl -> getEstado(tempId);
+						tempEl-> update(msgs[i]);
+						tempEl-> updateStatus(prevStatus);
+
+					}
 				}
 
-				else if ((tempEl -> getEstado() == status::START) ||
-						(tempEl -> getEstado() == status::RESET) ||
-						(tempEl -> getEstado() == status::PAUSA)){
+				else {
+					tempSta = tempEl -> getEstado(tempId);
+					if ((tempSta == status::START) ||
+						(tempSta == status::RESET) ||
+						(tempSta == status::PAUSA)){
 
 					//cout << "_processMsgs DEBUG viejoEvento = " << (char)tempEl -> getEstado() << endl;
 					oldEvent = true;
-					event = tempEl -> getEstado();
+					event = tempSta;
 					tempEl-> update(msgs[i]);
 
-				}
-				else{
+					}
+					else{
 					//cout << "_processMsgs DEBUG info = " << msgs[i] -> info[0] << endl;
 					tempEl-> update(msgs[i]);
+					}
+					//cout << "DEBUG _processMsgs actualizo el elemento" << endl;
 				}
-				//cout << "DEBUG _processMsgs actualizo el elemento" << endl;
+
+				if (playing){
+					addProgress(tempId);
+				}
 
 			}
 		}
 		else if (msgs[i] -> type[0] == '8'){
 			if (msgs[i] -> info[0] == (char) command::DISCONNECT){
+				//cout << "DEBUG _processMsgs llego disconnect" << endl;
 				if (SDL_LockMutex(mutexClientState) == 0) {
 					client_state[socket] = false;
 					SDL_UnlockMutex(mutexClientState);
@@ -203,8 +260,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		//memset(pathElemento, '=', pathl);
 		int i = 4;
 		buscarPathSprite(escenario.fondo.spriteId, pathFondo);
-		cout << "DEBUG buscarParhSprite pathFondo: " << pathFondo << endl;
-
+		//cout << "DEBUG _processMsgs pathFondo: " << pathFondo << endl;
 		answerMsgsQty = escenario.elementos.size() + 4;
 		*answerMsgs = new struct gst*[answerMsgsQty];
 		struct gst** answerIt = (*answerMsgs);
@@ -215,11 +271,13 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		list<type_Elemento>::iterator ite;
 		for (ite = escenario.elementos.begin(); ite != escenario.elementos.end(); ite ++) {
 			buscarPathSprite((ite) -> spriteId, pathElemento);
-			cout << "DEBUG buscarParhSprite pathElemento: " << pathElemento << endl;
+			//cout << "DEBUG _processMsgs pathElemento: " << pathElemento << endl;
 			answerIt[i] = genGstFromElemento(&(*ite), pathElemento);
 			i++;
 		}
-	} else {
+	//} else {
+	} else if (client_state[socket]){
+		//cout << "DEBUG _processMsgs llego al else" << endl;
 		answerMsgsQty = elementos.size();
 		*answerMsgs = new struct gst*[answerMsgsQty];
 		struct gst** answerIt = (*answerMsgs);
@@ -227,12 +285,10 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		elementosIt = elementos.begin();
 		for (int i = 0; i < answerMsgsQty; i++){
 	
-			answerIt[i] = genUpdateGstFromElemento(elementosIt -> second);
+			answerIt[i] = genUpdateGstFromElemento(elementosIt -> second, tempId);
 	
 			if ((newEvent || oldEvent) && (elementosIt -> first == tempId)){
-				cout << "_processMsgs DEBUG evento ori = " << answerIt[i] -> info[0] << endl;
 				answerIt[i] -> info[0] = (char) event;
-				cout << "_processMsgs DEBUG evento mod = " << answerIt[i] -> info[0] << endl;
 			}
 			else if (newEvent){
 				elementosIt -> second -> updateStatus(event);
@@ -241,7 +297,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 			elementosIt++;
 		}
 	}
-
+	//cout << "DEBUG _processMessages out" << endl;
 	return answerMsgsQty;
 
 }
@@ -260,17 +316,18 @@ static int processMessages (void *data) {
 	int msgQty;
 
 	while(!finish){
+		//cout << "DEBUG processMessages in" << endl;
 		if (!receiveQueueMessage(input_queue, msg)) {
 			return 1;
 		}else{
-			//slog.writeLine("processMessages | Processing input queue message: " + string(msg.minfo.data));
-			//long response = (validate_message(msg.minfo))? 1 : 2;
+
 			msgQty = _processMsgs(msg.minfo,msg.msocket, msg.msgQty, &answerMsgs);
 
 			//Writes the message in the socket's queue
 			writeQueueMessage(msg.msocket, answerMsgs, msgQty, true);
 			//cout << "DEBUG processMessages se escribio en la queue de escritura" << endl;
 		}
+		//cout << "DEBUG processMessages out" << endl;
 	}
 
 	return 0;
@@ -280,6 +337,7 @@ static int processMessages (void *data) {
 
 bool doReadingError(int n, int sock, char* buffer){
 
+	//cout << "DEBUG doReadingError in" << endl;
 	struct gst* msgExit = genAdminGst(0, command::DISCONNECT);
 	bool finish=false;
 
@@ -288,7 +346,10 @@ bool doReadingError(int n, int sock, char* buffer){
 		writeQueueMessage(sock, &msgExit, 1, true);
 		finish = true;
 
-		client_state[sock] = false;
+		if (SDL_LockMutex(mutexClientState) == 0) {
+			client_state[sock] = false;
+		    SDL_UnlockMutex(mutexClientState);
+		}
 	}
 
 	else if (n == 0){
@@ -296,17 +357,13 @@ bool doReadingError(int n, int sock, char* buffer){
 		slog.writeLine("doReadingError | Exit message received");
 		writeQueueMessage(sock, &msgExit, 1, true);
 		finish = true;
-	}/*else{
-		 if ((n == 1) & (string(buffer) == "q")){
-			//Exit message
-			slog.writeLine("doReading | Quit message received");
-			writeQueueMessage(sock,99, msgExit, true);
-			finish = true;
-		 }else {
-			slog.writeLine("doReading | Client send this message: " + string(buffer));
-		}
-	}*/
 
+		if (SDL_LockMutex(mutexClientState) == 0) {
+			client_state[sock] = false;
+			SDL_UnlockMutex(mutexClientState);
+		}
+	}
+	//cout << "DEBUG doReadingError out" << endl;
 	return finish;
 
 }
@@ -332,73 +389,6 @@ bool insertingMessageQueue(int sock, char *buffer){
 
 
 
-/*static int doReading (void *sockfd) {
-   int n;
-   bool finish = false;
-   char buffer[BUFLEN];
-   
-   int sock = *(int*) sockfd;
-   free(sockfd);
-   char messageLength[3];
-   int messageSize;
-   char bufferingMessage[BUFLEN];
-  
-   //Receive a message from client
-   while(!finish && !quit){
-
-	   //cout << "DEBUG doReading sock = " << sock << endl;
-	   //Read client's message
-		bzero(bufferingMessage,BUFLEN);
-		bzero(buffer,BUFLEN);
-   		n = recv(sock, buffer, BUFLEN-1, 0);
-		if (audit)
-			cout << "AUDIT rcv: " << buffer << endl;
-		//handle Error reading
-		finish = doReadingError(n, sock, buffer);
-	        	
-		if (finish){
-			if (SDL_LockMutex(mutexClientState) == 0) {
-				client_state[sock] = false;
-				SDL_UnlockMutex(mutexClientState);
-			}
-
-		}
-		else{
-			//getting the messageLength
-			strncpy(messageLength,buffer,3);
-			messageSize=atoi(messageLength);
-
-			if (n==messageSize){//full message received.
-				finish=insertingMessageQueue(sock,buffer);
-			}else{//message incomplete.
-				int readed=n;
-				cout << messageSize << endl;
-				while ( readed !=messageSize){
-					n =recv(sock,buffer+readed,messageSize-readed,0);
-					cout << "loopeando dentro del doreading" << endl;					
-					readed+=n;
-				}
-				finish=insertingMessageQueue(sock,buffer);
-			 }
-			if (SDL_LockMutex(mutexClientState) == 0) {
-				finish = !client_state[sock];
-				SDL_UnlockMutex(mutexClientState);
-				//cout << "DEBUG doReading finish = " << finish << endl;
-			}
-		}
-
-   	} // END WHILE
-	if (!quit){
-	if (SDL_LockMutex(mutexCantClientes) == 0) {
-         cant_con--;
- 	 SDL_UnlockMutex(mutexCantClientes);
-	}
-
-	close(sock);
-}
-	return 0;
-}*/
-
 static int doReading (void *sockfd) {
    int n;
    bool finish = false;
@@ -412,7 +402,7 @@ static int doReading (void *sockfd) {
 
    //Receive a message from client
    while(!finish && !quit){
-
+	   //cout << "DEBUG doReading in" << endl;
        //cout << "DEBUG doReading sock = " << sock << endl;
        //Read client's message
         //bzero(bufferingMessage,BUFLEN);
@@ -425,6 +415,7 @@ static int doReading (void *sockfd) {
         finish = doReadingError(n, sock, buffer);
 
         if (finish){
+        	//cout << "DEBUG doReading finish = true" << endl;
             if (SDL_LockMutex(mutexClientState) == 0) {
                 client_state[sock] = false;
                 SDL_UnlockMutex(mutexClientState);
@@ -432,19 +423,21 @@ static int doReading (void *sockfd) {
 
         }
         else{
+        	//cout << "DEBUG doReading finish = false" << endl;
             //getting the messageLength
             strncpy(messageLength,buffer,3);
             char* bufferIt = buffer;
-            while (!(messageLength[0] >= '0' && messageLength[0] <= '9') &&
+            /*while (!(messageLength[0] >= '0' && messageLength[0] <= '9') &&
                    !(messageLength[1] >= '0' && messageLength[1] <= '9') &&
-                   !(messageLength[2] >= '0' && messageLength[2] <= '9') ){
+                   !(messageLength[2] >= '0' && messageLength[2] <= '9') &&
+                   ((n-3) > 0)){
                 bufferIt++;
                 n--;
                 strncpy(messageLength,bufferIt,3);
                 //cout << "DEBUG DOREADING buffer = " << bufferIt << endl;
-            }
+            }*/
 
-            messageSize=atoi(messageLength);
+            messageSize = atoi(messageLength);
 
             if (n>=messageSize){//full message received.
                 finish=insertingMessageQueue(sock,bufferIt);
@@ -464,6 +457,7 @@ static int doReading (void *sockfd) {
                 //cout << "DEBUG doReading finish = " << finish << endl;
             }
         }
+        //cout << "DEBUG doReading out" << endl;
 
        } // END WHILE
     if (!quit){
@@ -495,17 +489,21 @@ static int doWriting (void *sockfd) {
    //Receive a message from client
      while(!finish && !quit)
      {
+    	 //cout << "DEBUG doWriting in" << endl;
 		msgqid = socket_queue[sock];
 		if (!receiveQueueMessage(msgqid, msg)) {
 			return 1;
 		}
-
+		//cout << "DEBUG doWriting intentando leer isSocketActive" << endl;
 		if (!*isSocketActive){
 			//Exit message received
 			//slog.writeLine("doWriting | Exit message received: " + string(msg.minfo.data));
+			//cout << "DEBUG doWriting entro a borrar socket" << endl;
 			socket_queue.erase(sock);
 			finish = true;
+			//cout << "DEBUG doWriting borro el socket" << endl;
 		}else{
+			//cout << "DEBUG doWriting entro en el else" << endl;
 			//slog.writeLine("doWriting | Received queue message: " + string(msg.minfo.data));
 			//Respond to the client
 			char* message;
@@ -514,7 +512,9 @@ static int doWriting (void *sockfd) {
 			//cout << "DEBUG doWriting encodeo los mensajes" << endl;
 
 			if(!quit){
+				//cout << "DEBUG doWriting intentando hacer send" << endl;
 				n = send(sock,message,messageLen,0);
+				//cout << "DEBUG doWriting superado el send" << endl;
 				if (audit)
 					cout << "AUDIT snd: " << message << endl;
 				if (n < 0) {
@@ -523,7 +523,9 @@ static int doWriting (void *sockfd) {
 				}
 				delete message;
 			}
+
 		}
+		//cout << "DEBUG doWriting out" << endl;
      }
 
      return 0;
@@ -607,6 +609,8 @@ static int exitManager (void *data) {
 	  SDL_LockMutex(mutexCantClientes);
 	  SDL_LockMutex(mutexQueue);
 	  SDL_LockMutex(mutexClientState);
+	  SDL_LockMutex(mutexProgress);
+
 	  for(auto const &it : socket_queue) {
 		  close(it.first);
 		  cant_con --;
@@ -616,6 +620,7 @@ static int exitManager (void *data) {
       SDL_DestroyMutex(mutexQueue);
       SDL_DestroyMutex(mutexCantClientes);
       SDL_DestroyMutex(mutexClientState);
+      SDL_DestroyMutex(mutexProgress);
 	  slog.writeLine("Application closed.");
 
 	  exit(0);
@@ -656,7 +661,7 @@ Elemento* genNewPlayer(int playerId, string username){
 	int anchoPantalla = 640 / 4;
 	int altura = 50;
 	users[username] = playerId;
-	Elemento* newPlayer = new Elemento(playerId, anchoPantalla * playerId, altura);
+	Elemento* newPlayer = new Elemento(playerId, anchoPantalla * playerId, altura, cantJug);
 	elementos[playerId] = newPlayer;
 
 	return newPlayer;
@@ -671,6 +676,7 @@ int main(int argc, char **argv)
    	mutexQueue = SDL_CreateMutex();
 	mutexCantClientes = SDL_CreateMutex();
 	mutexClientState = SDL_CreateMutex();
+	mutexProgress = SDL_CreateMutex();
 	cant_con = 0;
 
 	//Log initialize
@@ -697,6 +703,8 @@ int main(int argc, char **argv)
 	char* buffer;
 	int playerId = 1, bufferLen, newId;
 	string newUsername;
+	progress = new unsigned int[cantJug];
+	resetProgress();
 
 	 while (1) {
 
@@ -744,12 +752,13 @@ int main(int argc, char **argv)
 
 				if (!alreadyAPlayer){
 					conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
-					conMsg[1] = genUpdateGstFromElemento(genNewPlayer(playerId, newUsername));
+					Elemento* tempElem = genNewPlayer(playerId, newUsername);
+					conMsg[1] = genInitGst(playerId, 1, tempElem -> getPosX(), tempElem -> getPosY(), playing);
 				}
 				else{
 					newId = users[newUsername];
 					conMsg[0] = genAdminGst(newId, command::CON_SUCCESS);
-					conMsg[1] = genUpdateGstFromElemento(elementos[newId]);
+					conMsg[1] = genInitGst(newId, getProgress(), elementos[newId] -> getPosX(), elementos[newId] -> getPosY(), playing);
 				}
 
 				bufferLen = encodeMessages(&buffer, conMsg, 2);

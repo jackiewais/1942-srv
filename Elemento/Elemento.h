@@ -28,10 +28,12 @@ private:
 	int id;
 	int posX;
 	int posY;
-	status estado;
+	status* estado;
+	int estadoLen;
+
 public:
-	Elemento(int idEl, int x, int y);
-	Elemento(struct gst*);
+	Elemento(int idEl, int x, int y, int cantJug);
+	Elemento(struct gst*, int cantJug);
 //	virtual ~Elemento();
 	void update(int x, int y, status estado);
 	void update(struct gst*);
@@ -40,7 +42,7 @@ public:
 	int getId();
 	int getPosX();
 	int getPosY();
-	status getEstado();
+	status getEstado(int idc);
 };
 
 #endif /* ELEMENTO_ELEMENTO_H_ */

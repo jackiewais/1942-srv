@@ -70,7 +70,7 @@ struct gst {
 };
 
 enum msgType:char{
-
+	INIT = '1',
 	UPDATE = '2',
 	REMOVE = '3',
 	CONTROL = '8',
@@ -95,7 +95,9 @@ int decodeMessages(struct gst*** msgs, char* msgsChar);
 
 int encodeMessages(char** msgsChar, struct gst** msgs, int qty);
 
-struct gst* genUpdateGstFromElemento(Elemento*);
+struct gst* genInitGst(int id, int progress, int posx, int posy, bool playing);
+
+struct gst* genUpdateGstFromElemento(Elemento*, int idc);
 
 struct gst* genAdminGst(int clientId, command comando);
 

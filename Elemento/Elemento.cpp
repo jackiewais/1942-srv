@@ -7,41 +7,62 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
 #include "Elemento.h"
 #include "../Utils/messages.h"
 
-Elemento::Elemento(int idEl, int x, int y) {
+Elemento::Elemento(int idEl, int x, int y, int cantJug) {
 	id = idEl;
 	posX = x;
 	posY= y;
-	estado = VIVO;
+	estadoLen = cantJug;
+	estado = new status[cantJug];
+	for (int i = 0; i < estadoLen; i++){
+		estado[i] = status::VIVO;
+	}
 
 }
 
-Elemento::Elemento(struct gst* msg){
+Elemento::Elemento(struct gst* msg, int cantJug){
 
 	id = atoi(msg -> id);
 	posX = atoi(msg -> posx);
 	posY = atoi(msg -> posy);
-	estado = VIVO;
+	estadoLen = cantJug;
+	estado = new status[cantJug];
+	for (int i = 0; i < estadoLen; i++){
+		estado[i] = status::VIVO;
+	}
 }
 
 void Elemento::update(int x, int y, status nuevoEstado){
 	posX = x;
 	posY = y;
-	estado = nuevoEstado;
+	this->updateStatus(nuevoEstado);
 }
 
 void Elemento::update(struct gst* msg){
+	status nuevoEstado;
 	if (id == (atoi(msg -> id))){
 		posX = atoi(msg -> posx);
 		posY = atoi(msg -> posy);
-		estado = (status) msg -> info[0];
+		nuevoEstado = (status) msg -> info[0];
+		this->updateStatus(nuevoEstado);
 	}
 }
 
 void Elemento::updateStatus(status nuevoEstado){
-	estado = nuevoEstado;
+	if ((nuevoEstado == status::START) ||
+		(nuevoEstado == status::RESET) ||
+		(nuevoEstado == status::PAUSA) ||
+		(nuevoEstado == status::VIVO)){
+			estado[id - 1] = nuevoEstado;
+	}
+	else{
+		for (int i = 0; i < estadoLen; i++){
+			estado[i] = nuevoEstado;
+		}
+	}
 }
 
 void Elemento::updatePos(int x, int y){
@@ -62,8 +83,12 @@ int Elemento::getPosY(){
 	return posY;
 }
 
-status Elemento::getEstado(){
-	return estado;
+status Elemento::getEstado(int idc){
+	status temp = estado[idc -1];
+	if ((temp == status::DISPARANDO) ||(temp == status::TRUCO)){
+		estado[idc -1] = status::VIVO;
+	}
+	return temp;
 }
 
 
