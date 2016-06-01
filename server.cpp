@@ -180,7 +180,8 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 				tempSta = (status) msgs[i] -> info[0];
 				if ((tempSta == status::START) ||
 					(tempSta == status::RESET) ||
-					(tempSta == status::PAUSA)){
+					(tempSta == status::PAUSA) ||
+					(tempSta == status::NO_PAUSA)){
 
 					//cout << "_processMsgs DEBUG nuevoEvento = " << msgs[i] -> info[0] << endl;
 					if(readyToStart){
@@ -211,7 +212,8 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 					tempSta = tempEl -> getEstado(tempId);
 					if ((tempSta == status::START) ||
 						(tempSta == status::RESET) ||
-						(tempSta == status::PAUSA)){
+						(tempSta == status::PAUSA) ||
+						(tempSta == status::NO_PAUSA)){
 
 					//cout << "_processMsgs DEBUG viejoEvento = " << (char)tempEl -> getEstado() << endl;
 					oldEvent = true;
@@ -250,6 +252,8 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 		}
 		delete msgs[i];
 	}
+	delete[] msgs;
+
 	if (isSprites) {
 		int i = 0;
 		answerMsgsQty = sprites.size();
@@ -517,7 +521,12 @@ static int doWriting (void *sockfd) {
 			//cout << "DEBUG doWriting esta queriendo encodear los mensajes" << endl;
 			int messageLen = encodeMessages(&message, msg.minfo, msg.msgQty);
 			//cout << "DEBUG doWriting encodeo los mensajes" << endl;
-
+			/*
+			for (int i = 0; i < msg.msgQty; i++){
+				delete msg.minfo[i];
+			}
+			delete[] msg.minfo;
+			 */
 			if(!quit){
 				//cout << "DEBUG doWriting intentando hacer send" << endl;
 				n = send(sock,message,messageLen,0);
@@ -771,6 +780,9 @@ int main(int argc, char **argv)
 				}
 
 				bufferLen = encodeMessages(&buffer, conMsg, 2);
+				delete conMsg[0];
+				delete conMsg[1];
+
 				if (audit)
 					cout << "AUDIT snd: " << buffer << endl;
 				send(newsockfd, buffer, bufferLen, 0);
