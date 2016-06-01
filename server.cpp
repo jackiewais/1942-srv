@@ -658,8 +658,8 @@ void leerXML(int &cantMaxClientes, int &puerto, int &audit){
 
 
 Elemento* genNewPlayer(int playerId, string username){
-	int anchoPantalla = 640 / 4;
-	int altura = 50;
+	int anchoPantalla = 500 / 3;
+	int altura = 500-68;
 	users[username] = playerId;
 	Elemento* newPlayer = new Elemento(playerId, anchoPantalla * playerId, altura, cantJug);
 	elementos[playerId] = newPlayer;
