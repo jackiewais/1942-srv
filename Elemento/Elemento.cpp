@@ -52,10 +52,11 @@ void Elemento::update(struct gst* msg){
 }
 
 void Elemento::updateStatus(status nuevoEstado){
-	if ((nuevoEstado == status::START) ||
+	if (((nuevoEstado == status::START) ||
 		(nuevoEstado == status::RESET) ||
 		(nuevoEstado == status::PAUSA) ||
-		(nuevoEstado == status::VIVO)){
+		(nuevoEstado == status::VIVO)) &&
+		(estado[0] != status::DESCONECTADO)){
 			estado[id - 1] = nuevoEstado;
 	}
 	else{
