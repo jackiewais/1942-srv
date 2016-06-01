@@ -115,6 +115,13 @@ void addProgress(int id){
 	}
 }
 
+void updateProgress(int id, int prog){
+	if (SDL_LockMutex(mutexProgress) == 0) {
+		progress[id -1] = prog;
+	SDL_UnlockMutex(mutexProgress);
+	}
+}
+
 int getProgress(){
 	int temp = 1;
 	if (SDL_LockMutex(mutexProgress) == 0) {
@@ -658,7 +665,7 @@ void leerXML(int &cantMaxClientes, int &puerto, int &audit){
 
 
 Elemento* genNewPlayer(int playerId, string username){
-	int anchoPantalla = 500 / 3;
+	int anchoPantalla = 500 / (cantJug + 1);
 	int altura = 500-68;
 	users[username] = playerId;
 	Elemento* newPlayer = new Elemento(playerId, anchoPantalla * playerId, altura, cantJug);
@@ -701,7 +708,7 @@ int main(int argc, char **argv)
 
 	struct gst* conMsg[2];
 	char* buffer;
-	int playerId = 1, bufferLen, newId;
+	int playerId = 1, bufferLen, newId, tempProgress;
 	string newUsername;
 	progress = new unsigned int[cantJug];
 	resetProgress();
@@ -757,6 +764,8 @@ int main(int argc, char **argv)
 				}
 				else{
 					newId = users[newUsername];
+					tempProgress = getProgress();
+					updateProgress(newId, tempProgress);
 					conMsg[0] = genAdminGst(newId, command::CON_SUCCESS);
 					conMsg[1] = genInitGst(newId, getProgress(), elementos[newId] -> getPosX(), elementos[newId] -> getPosY(), playing);
 				}
