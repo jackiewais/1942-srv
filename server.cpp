@@ -111,6 +111,7 @@ void resetProgress(){
 void addProgress(int id){
 	if (SDL_LockMutex(mutexProgress) == 0) {
 		progress[id -1]++;
+		cout << "DEBUG: addProgress progress[" << id << "] = " << progress[id-1] << endl;
 	SDL_UnlockMutex(mutexProgress);
 	}
 }
@@ -190,10 +191,12 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 							resetProgress();
 							playing = true;
 						}
-						else if (tempSta == status::PAUSA){
+						else if ((tempSta == status::PAUSA) || (tempSta == status::NO_PAUSA)){
 							playing = !playing;
 						}
 						else{		//tempSta == RESET
+
+							cout << "DEBUG _processMsgs llego un reset " << endl << endl;
 							resetProgress();
 							playing = true;
 						}
