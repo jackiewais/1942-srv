@@ -111,7 +111,7 @@ void resetProgress(){
 void addProgress(int id){
 	if (SDL_LockMutex(mutexProgress) == 0) {
 		progress[id -1]++;
-		cout << "DEBUG: addProgress progress[" << id << "] = " << progress[id-1] << endl;
+		//cout << "DEBUG: addProgress progress[" << id << "] = " << progress[id-1] << endl;
 	SDL_UnlockMutex(mutexProgress);
 	}
 }
@@ -196,7 +196,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 						}
 						else{		//tempSta == RESET
 
-							cout << "DEBUG _processMsgs llego un reset " << endl << endl;
+							//cout << "DEBUG _processMsgs llego un reset " << endl << endl;
 							resetProgress();
 							playing = true;
 						}
@@ -305,7 +305,16 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 				answerIt[i] -> info[0] = (char) event;
 			}
 			else if (newEvent){
-				elementosIt -> second -> updateStatus(event);
+				if (elementosIt -> second -> getEstado(tempId) != status::DESCONECTADO){
+					//cout << "DEBUG _processMsgs: entro a !desconectado " << elementosIt -> first <<  endl;
+					elementosIt -> second -> updateStatus(event);
+				}
+				else if (tempSta == status::RESET){
+					//cout << "DEBUG _processMsgs: entro a resetear pos" <<  endl;
+					int posx = ventana.ancho * (elementosIt -> second -> getId())/ (cantJug + 1);
+					int posy = ventana.alto - 68;
+					elementosIt -> second -> updatePos(posx, posy);
+				}
 			}
 		
 			elementosIt++;
