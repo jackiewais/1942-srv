@@ -395,9 +395,9 @@ bool doReadingError(int n, int sock, char* buffer){
 bool insertingMessageQueue(int sock, char *buffer){
 	struct gst** msgs;
 	int msgQty;
-	bool finish=false;
-      
-				
+	bool finish = false;
+
+
 	//mutex lock.
 	if (SDL_LockMutex(mutexQueue) == 0) {
 		//slog.writeLine("insertingMessageQueue | Inserting message '" + string(buffer) + "' into clients queue");
@@ -406,7 +406,7 @@ bool insertingMessageQueue(int sock, char *buffer){
 	 //mutex unlock
 	 SDL_UnlockMutex(mutexQueue);
 	}
-				
+
 	return finish;
 }
 
