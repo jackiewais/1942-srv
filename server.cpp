@@ -43,7 +43,7 @@ type_Escenario escenario;
 type_Avion jugador;
 string pathXMLEscenario = "escenario.xml";
 
-
+map<int,int> socket_to_id;
 //====================================================================================================
 
 
@@ -267,6 +267,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 			answerIt[i] = genGstFromSprite(&(*iter));
 			i++;
 		}
+	
 
 	} else if (isEscenario) {
 		char *pathFondo, *pathElemento;
@@ -348,11 +349,13 @@ static int processMessages (void *data) {
 
 			//Writes the message in the socket's queue
 			writeQueueMessage(msg.msocket, answerMsgs, msgQty, true);
+						
 			//cout << "DEBUG processMessages se escribio en la queue de escritura" << endl;
 		}
 		//cout << "DEBUG processMessages out" << endl;
-	}
 
+	}
+	
 	return 0;
 
 }
@@ -373,6 +376,7 @@ bool doReadingError(int n, int sock, char* buffer){
 			client_state[sock] = false;
 		    SDL_UnlockMutex(mutexClientState);
 		}
+	elementos[socket_to_id[sock]]-> updateStatus(status::DESCONECTADO);
 	}
 
 	else if (n == 0){
@@ -742,7 +746,7 @@ int main(int argc, char **argv)
 		 newsockfd = accept(sockfd, (sockaddr *) &cli_addr, &cli_len);
 
 		 struct timeval timeout;
-		 timeout.tv_sec = 120;
+		 timeout.tv_sec = 10;
 		 timeout.tv_usec = 0;
 
 		 if (setsockopt (newsockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0)
@@ -782,6 +786,7 @@ int main(int argc, char **argv)
 					conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
 					Elemento* tempElem = genNewPlayer(playerId, newUsername);
 					conMsg[1] = genInitGst(playerId, 1, tempElem -> getPosX(), tempElem -> getPosY(), playing);
+				socket_to_id[newsockfd] = playerId;
 				}
 				else{
 					newId = users[newUsername];
@@ -789,6 +794,7 @@ int main(int argc, char **argv)
 					updateProgress(newId, tempProgress);
 					conMsg[0] = genAdminGst(newId, command::CON_SUCCESS);
 					conMsg[1] = genInitGst(newId, getProgress(), elementos[newId] -> getPosX(), elementos[newId] -> getPosY(), playing);
+				socket_to_id[newsockfd] = playerId;
 				}
 
 				bufferLen = encodeMessages(&buffer, conMsg, 2);
