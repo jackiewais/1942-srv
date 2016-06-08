@@ -731,7 +731,7 @@ int main(int argc, char **argv)
 
 	cli_len = sizeof(cli_addr);
 
-	struct gst* conMsg[2];
+	struct gst** conMsg;
 	char* buffer;
 	int playerId = 1, bufferLen, newId, tempProgress;
 	string newUsername;
@@ -739,6 +739,8 @@ int main(int argc, char **argv)
 	resetProgress();
 
 	 while (1) {
+
+		 conMsg = new struct gst* [1];
 
 		 cout << "Current connections: " << cant_con << " \n";
 
@@ -775,14 +777,16 @@ int main(int argc, char **argv)
 
 			if (!alreadyAPlayer && (cant_con == cantJug || readyToStart) ){
 				//Game is not accepting new players
+				conMsg = new struct gst* [1];
 				conMsg[0] = genAdminGst(0, command::CON_FAIL);
 				bufferLen = encodeMessages(&buffer, conMsg, 1);
 				send(newsockfd, buffer, bufferLen ,0);
 				close(newsockfd);
 				delete buffer;
 			}else{
-
+				conMsg = new struct gst* [2];
 				if (!alreadyAPlayer){
+
 					conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
 					Elemento* tempElem = genNewPlayer(playerId, newUsername);
 					conMsg[1] = genInitGst(playerId, 1, tempElem -> getPosX(), tempElem -> getPosY(), playing);
@@ -798,8 +802,8 @@ int main(int argc, char **argv)
 				}
 
 				bufferLen = encodeMessages(&buffer, conMsg, 2);
-				delete conMsg[0];
-				delete conMsg[1];
+				//delete conMsg[0];
+				//delete conMsg[1];
 
 				if (audit)
 					cout << "AUDIT snd: " << buffer << endl;
