@@ -8,7 +8,7 @@ namespace queueManager{
 		  int msgQty;
 		};
 
-		bool sendQueueMessage(int msgqid, msg_buf msg);
+		bool sendQueueMessage(int msgqid, msg_buf &msg);
 		bool getQueue(int &queue);
 		bool receiveQueueMessage(int queue, msg_buf &msg);
 

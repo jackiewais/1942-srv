@@ -12,7 +12,7 @@ using namespace queueManager;
 
 
 namespace queueManager{
-bool sendQueueMessage(int msgqid, msg_buf msg){
+bool sendQueueMessage(int msgqid, msg_buf &msg){
 	int rc;
 
 	rc = msgsnd(msgqid, &msg, sizeof(msg_buf), 0);

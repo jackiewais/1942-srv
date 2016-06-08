@@ -364,10 +364,11 @@ static int processMessages (void *data) {
 bool doReadingError(int n, int sock, char* buffer){
 
 	//cout << "DEBUG doReadingError in" << endl;
-	struct gst* msgExit = genAdminGst(0, command::DISCONNECT);
+
 	bool finish=false;
 
 	if (n < 0) {
+		struct gst* msgExit = genAdminGst(0, command::DISCONNECT);
 		slog.writeErrorLine("doReadingError | ERROR reading from socket");
 		writeQueueMessage(sock, &msgExit, 1, true);
 		finish = true;
@@ -381,6 +382,7 @@ bool doReadingError(int n, int sock, char* buffer){
 
 	else if (n == 0){
 		//Exit message
+		struct gst* msgExit = genAdminGst(0, command::DISCONNECT);
 		slog.writeLine("doReadingError | Exit message received");
 		writeQueueMessage(sock, &msgExit, 1, true);
 		finish = true;
@@ -536,6 +538,7 @@ static int doWriting (void *sockfd) {
 			char* message;
 			//cout << "DEBUG doWriting esta queriendo encodear los mensajes" << endl;
 			int messageLen = encodeMessages(&message, msg.minfo, msg.msgQty);
+			delete[] msg.minfo;
 			//cout << "DEBUG doWriting encodeo los mensajes" << endl;
 			/*
 			for (int i = 0; i < msg.msgQty; i++){
@@ -553,7 +556,7 @@ static int doWriting (void *sockfd) {
 					slog.writeErrorLine("doWriting | ERROR writing to socket");
 					finish = true;
 				}
-				delete message;
+				delete[] message;
 			}
 
 		}

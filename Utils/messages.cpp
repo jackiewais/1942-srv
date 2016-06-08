@@ -191,6 +191,7 @@ int encodeMessages(char** msgsChar, struct gst** msgs, int qty){
 
 		}
 
+		delete (*msgs);
 		msgs++;
 		
 	}
