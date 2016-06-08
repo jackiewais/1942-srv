@@ -198,7 +198,7 @@ int _processMsgs(struct gst** msgs, int socket, int msgQty, struct gst*** answer
 
 							//cout << "DEBUG _processMsgs llego un reset " << endl << endl;
 							resetProgress();
-							playing = true;
+							playing = false;
 						}
 
 						newEvent = true;
@@ -767,7 +767,8 @@ int main(int argc, char **argv)
 			 conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
 			 bufferLen = encodeMessages(&buffer, conMsg, 1);
 			 send(newsockfd, buffer, bufferLen ,0);
-			 delete buffer;
+			 delete[] buffer;
+			 delete[] conMsg;
 
 			 //Leo el nombre
 			 buffer = new char[BUFLEN];
@@ -785,7 +786,7 @@ int main(int argc, char **argv)
 				bufferLen = encodeMessages(&buffer, conMsg, 1);
 				send(newsockfd, buffer, bufferLen ,0);
 				close(newsockfd);
-				delete buffer;
+				delete[] buffer;
 			}else{
 				conMsg = new struct gst* [2];
 				if (!alreadyAPlayer){
@@ -793,7 +794,8 @@ int main(int argc, char **argv)
 					conMsg[0] = genAdminGst(playerId, command::CON_SUCCESS);
 					Elemento* tempElem = genNewPlayer(playerId, newUsername);
 					conMsg[1] = genInitGst(playerId, 1, tempElem -> getPosX(), tempElem -> getPosY(), playing);
-				socket_to_id[newsockfd] = playerId;
+					socket_to_id[newsockfd] = playerId;
+
 				}
 				else{
 					newId = users[newUsername];
@@ -822,7 +824,8 @@ int main(int argc, char **argv)
 				}
 				manageNewConnection(newsockfd);
 				cout << "El usuario " << newUsername << " se ha conectado corretamente." << endl;
-				delete buffer;
+				delete[] conMsg;
+				delete[] buffer;
 				playerId++;
 
 			}
